@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "771258526751",
+    "project_id": "mindi-app-garcon",
+    "storage_bucket": "mindi-app-garcon.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:771258526751:android:dbe11da54107a9c701392a",
+        "android_client_info": {
+          "package_name": "com.mindi.garcom"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpsHR-3RET8tPuce37wnv3zZuBSMv4DJo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
