@@ -301,6 +301,10 @@ class _TelaMesasState extends State<TelaMesas> {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      // sem isso a grade se acha a rolagem principal da tela e reserva
+      // um espaço no topo do tamanho da barra de status do celular
+      primary: false,
+      padding: EdgeInsets.zero,
       itemCount: _visiveis.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
