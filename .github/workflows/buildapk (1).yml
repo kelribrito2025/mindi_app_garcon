@@ -1,0 +1,414 @@
+name: Gerar APK
+
+# Este workflow so roda quando voce clica em "Run workflow" e escolhe
+# o que quer fazer:
+#
+#   correcao     -> manda a correcao pelo ar (o app se atualiza sozinho)
+#   versao-nova  -> gera um APK novo para instalar no celular
+#
+# Use "versao-nova" quando entrar um recurso novo do celular
+# (notificacao, camera, GPS, pacote novo). Nos outros casos, "correcao".
+on:
+  workflow_dispatch:
+    inputs:
+      acao:
+        description: 'O que voce quer fazer'
+        required: true
+        type: choice
+        default: correcao
+        options:
+          - correcao
+          - versao-nova
+          - play-store
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar os arquivos do repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Localizar o projeto pela pasta app_src
+        run: |
+          APPSRC=$(find . -type d -name app_src -not -path './.git/*' | head -1)
+          SRC=$(dirname "$APPSRC")
+          echo "Projeto encontrado em: $SRC"
+          if [ "$SRC" != "." ]; then
+            cp -r "$SRC"/. .
+          fi
+          ls -la
+
+      - name: Criar a estrutura Android
+        run: flutter create . --org com.mindi --project-name garcom --platforms=android
+
+      - name: Liberar internet e notificacao no Android
+        run: |
+          python3 - <<'EOF'
+          caminho = 'android/app/src/main/AndroidManifest.xml'
+          xml = open(caminho, encoding='utf-8').read()
+          extras = ''
+          if 'android.permission.INTERNET' not in xml:
+              extras += '\n    <uses-permission android:name="android.permission.INTERNET"/>'
+          if 'POST_NOTIFICATIONS' not in xml:
+              extras += ('\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>'
+                         '\n    <uses-permission android:name="android.permission.VIBRATE"/>'
+                         '\n    <uses-permission android:name="android.permission.WAKE_LOCK"/>')
+          if '<queries>' not in xml:
+              extras += ('\n    <queries>'
+                         '\n        <intent><action android:name="android.intent.action.VIEW"/>'
+                         '<data android:scheme="https"/></intent>'
+                         '\n        <intent><action android:name="android.intent.action.DIAL"/>'
+                         '<data android:scheme="tel"/></intent>'
+                         '\n    </queries>')
+          if extras:
+              i = xml.index('>', xml.index('<manifest')) + 1
+              xml = xml[:i] + extras + xml[i:]
+              print('permissoes adicionadas')
+
+          # nome que aparece embaixo do icone no celular
+          import re as _re
+          xml = _re.sub(r'android:label="[^"]*"',
+                        'android:label="Mindi - Garçom"', xml, count=1)
+
+          # canal de aviso usado pelas notificacoes de pedido novo
+          # (sem isso o Android usa o canal padrao, que chega mudo)
+          if 'default_notification_channel_id' not in xml:
+              meta = ('\n        <meta-data'
+                      ' android:name="com.google.firebase.messaging.default_notification_channel_id"'
+                      ' android:value="garcom_mindi"/>')
+              j = xml.index('>', xml.index('<application')) + 1
+              xml = xml[:j] + meta + xml[j:]
+              print('canal padrao de notificacao definido')
+
+          open(caminho, 'w', encoding='utf-8').write(xml)
+          print('manifest atualizado')
+          EOF
+          head -14 android/app/src/main/AndroidManifest.xml
+
+      - name: Configurar o Firebase (notificacoes)
+        run: |
+          if [ ! -f google-services.json ]; then
+            echo "ERRO: google-services.json nao encontrado na pasta do projeto."
+            exit 1
+          fi
+          cp google-services.json android/app/google-services.json
+
+          NDK=$(ls "$ANDROID_SDK_ROOT/ndk" 2>/dev/null | sort -V | tail -1)
+          if [ -z "$NDK" ]; then NDK=27.0.12077973; fi
+          echo "NDK escolhido: $NDK"
+
+          NDK="$NDK" python3 - <<'EOF'
+          import os, re
+
+          ndk = os.environ['NDK']
+          pacote = 'com.mindi.garcom'
+
+          # acrescenta uma linha NO FIM do bloco plugins { }
+          # (o google-services precisa vir depois do plugin do Android)
+          def add_plugin(txt, linha):
+              i = txt.index('plugins {')
+              fim = txt.index('}', i)
+              return txt[:fim] + linha + txt[fim:]
+
+          app = 'android/app/build.gradle.kts'
+          if not os.path.exists(app):
+              app = 'android/app/build.gradle'
+          cfg = 'android/settings.gradle.kts'
+          if not os.path.exists(cfg):
+              cfg = 'android/settings.gradle'
+          kts = app.endswith('.kts')
+
+          # ---- settings.gradle: declara o plugin do Google Services ----
+          s = open(cfg, encoding='utf-8').read()
+          if 'com.google.gms.google-services' not in s:
+              linha = ('    id("com.google.gms.google-services") version "4.4.2" apply false\n'
+                       if cfg.endswith('.kts') else
+                       '    id "com.google.gms.google-services" version "4.4.2" apply false\n')
+              s = add_plugin(s, linha)
+              open(cfg, 'w', encoding='utf-8').write(s)
+              print('settings.gradle atualizado')
+
+          # ---- app/build.gradle: aplica o plugin + ajustes ----
+          a = open(app, encoding='utf-8').read()
+
+          if 'com.google.gms.google-services' not in a:
+              linha = ('    id("com.google.gms.google-services")\n' if kts
+                       else '    id "com.google.gms.google-services"\n')
+              a = add_plugin(a, linha)
+
+          # id do aplicativo tem que bater com o google-services.json
+          a = re.sub(r'(applicationId\s*=\s*)"[^"]*"', r'\1"%s"' % pacote, a)
+          a = re.sub(r'(applicationId\s+)"[^"]*"', r'\1"%s"' % pacote, a)
+
+          # Firebase precisa de Android 6 pra cima
+          a = re.sub(r'minSdk\s*=\s*flutter\.minSdkVersion', 'minSdk = 23', a)
+          a = re.sub(r'minSdkVersion\s+flutter\.minSdkVersion', 'minSdkVersion 23', a)
+
+          # versao do NDK que existe nesta maquina
+          if 'ndkVersion' in a:
+              a = re.sub(r'ndkVersion\s*=\s*[^\n]+', 'ndkVersion = "%s"' % ndk, a) if kts \
+                  else re.sub(r'ndkVersion\s+[^\n]+', 'ndkVersion "%s"' % ndk, a)
+          else:
+              i = a.index('android {')
+              j = a.index('\n', i) + 1
+              linha = ('    ndkVersion = "%s"\n' % ndk) if kts else ('    ndkVersion "%s"\n' % ndk)
+              a = a[:j] + linha + a[j:]
+
+          open(app, 'w', encoding='utf-8').write(a)
+          print('build.gradle atualizado')
+          EOF
+
+          echo '--- settings ---'; grep -n "google-services" android/settings.gradle* || true
+          echo '--- app ---'; grep -n "google-services\|applicationId\|minSdk\|ndkVersion" android/app/build.gradle* || true
+
+      - name: Ativar o recurso de notificacao com aviso proprio
+        run: |
+          python3 - <<'EOF'
+          import os
+
+          # O pacote de notificacoes (flutter_local_notifications) exige
+          # o "desugaring" ligado no Android. Sem isso o APK nao compila.
+          app = 'android/app/build.gradle.kts'
+          if not os.path.exists(app):
+              app = 'android/app/build.gradle'
+          kts = app.endswith('.kts')
+
+          a = open(app, encoding='utf-8').read()
+
+          if 'oreLibraryDesugaringEnabled' not in a:
+              linha = ('        isCoreLibraryDesugaringEnabled = true\n' if kts
+                       else '        coreLibraryDesugaringEnabled true\n')
+              if 'compileOptions {' in a:
+                  i = a.index('compileOptions {')
+                  j = a.index('\n', i) + 1
+                  a = a[:j] + linha + a[j:]
+              else:
+                  i = a.index('android {')
+                  j = a.index('\n', i) + 1
+                  a = a[:j] + '    compileOptions {\n' + linha + '    }\n' + a[j:]
+              print('desugaring ligado')
+
+          if 'coreLibraryDesugaring(' not in a and 'coreLibraryDesugaring ' not in a:
+              bloco = ('\ndependencies {\n'
+                       '    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n'
+                       '}\n' if kts else
+                       '\ndependencies {\n'
+                       "    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n"
+                       '}\n')
+              a = a + bloco
+              print('biblioteca de desugaring adicionada')
+
+          open(app, 'w', encoding='utf-8').write(a)
+          EOF
+          grep -n "esugaring" android/app/build.gradle* || true
+
+      - name: Assinar o APK sempre com a mesma chave
+        env:
+          CHAVE: ${{ secrets.GARCOM_KEYSTORE_BASE64 }}
+          SENHA: ${{ secrets.GARCOM_KEYSTORE_SENHA }}
+        run: |
+          if [ -z "$CHAVE" ]; then
+            echo "AVISO: sem a chave de assinatura. O APK sai com a chave temporaria."
+            echo "Cadastre os segredos GARCOM_KEYSTORE_BASE64 e GARCOM_KEYSTORE_SENHA."
+            exit 0
+          fi
+
+          LIMPA=$(printf '%s' "$CHAVE" | tr -d '[:space:]')
+          echo "tamanho da chave recebida: ${#LIMPA} caracteres (o certo e 3640)"
+          if ! printf '%s' "$LIMPA" | base64 -d > android/app/garcom.jks 2>/dev/null; then
+            echo "ERRO: o segredo GARCOM_KEYSTORE_BASE64 esta incompleto ou corrompido."
+            echo "Copie NOVAMENTE todo o conteudo do arquivo garcom2_base64.txt."
+            exit 1
+          fi
+          cat > android/key.properties <<PROPS
+          storeFile=garcom.jks
+          storePassword=$SENHA
+          keyAlias=garcom
+          keyPassword=$SENHA
+          PROPS
+
+          python3 - <<'EOF'
+          import os
+          app = 'android/app/build.gradle.kts'
+          if not os.path.exists(app):
+              app = 'android/app/build.gradle'
+          kts = app.endswith('.kts')
+          a = open(app, encoding='utf-8').read()
+
+          if 'MINDI_ASSINATURA' in a:
+              raise SystemExit(0)
+
+          if kts:
+              # os imports precisam ficar no topo do arquivo
+              topo = ('// MINDI_ASSINATURA\n'
+                      'import java.util.Properties\n'
+                      'import java.io.FileInputStream\n\n')
+              # ja as variaveis so podem vir DEPOIS do bloco plugins { }
+              lidachave = ('\nval chaveProps = Properties()\n'
+                           'val chaveArquivo = rootProject.file("key.properties")\n'
+                           'if (chaveArquivo.exists()) '
+                           '{ chaveProps.load(FileInputStream(chaveArquivo)) }\n')
+              assinatura = '\n'.join([
+                  '',
+                  '    signingConfigs {',
+                  '        create("garcom") {',
+                  '            keyAlias = chaveProps["keyAlias"] as String',
+                  '            keyPassword = chaveProps["keyPassword"] as String',
+                  '            storeFile = file(chaveProps["storeFile"] as String)',
+                  '            storePassword = chaveProps["storePassword"] as String',
+                  '        }',
+                  '    }',
+                  '',
+              ])
+              alvo = 'signingConfigs.getByName("debug")'
+              novo = 'signingConfigs.getByName("garcom")'
+          else:
+              topo = '// MINDI_ASSINATURA\n'
+              lidachave = ('\ndef chaveProps = new Properties()\n'
+                           'def chaveArquivo = rootProject.file("key.properties")\n'
+                           'if (chaveArquivo.exists()) '
+                           '{ chaveArquivo.withInputStream { chaveProps.load(it) } }\n')
+              assinatura = '\n'.join([
+                  '',
+                  '    signingConfigs {',
+                  '        mindi {',
+                  "            keyAlias chaveProps['keyAlias']",
+                  "            keyPassword chaveProps['keyPassword']",
+                  "            storeFile file(chaveProps['storeFile'])",
+                  "            storePassword chaveProps['storePassword']",
+                  '        }',
+                  '    }',
+                  '',
+              ])
+              alvo = 'signingConfig signingConfigs.debug'
+              novo = 'signingConfig signingConfigs.mindi'
+
+          a = topo + a
+
+          # variaveis logo depois do fim do bloco plugins { }
+          p = a.index('plugins {')
+          fimplugins = a.index('}', p) + 1
+          a = a[:fimplugins] + '\n' + lidachave + a[fimplugins:]
+
+          i = a.index('android {')
+          j = a.index('\n', i) + 1
+          a = a[:j] + assinatura + a[j:]
+
+          if alvo in a:
+              a = a.replace(alvo, novo)
+              print('release passou a usar a chave da Mindi')
+          else:
+              print('AVISO: nao achei a linha de assinatura do release')
+
+          open(app, 'w', encoding='utf-8').write(a)
+          EOF
+          echo "chave de assinatura configurada"
+
+      - name: Colocar o codigo das telas no lugar certo
+        run: |
+          mkdir -p lib
+          cp app_src/*.dart lib/
+          # o teste de exemplo criado pelo flutter create atrapalha a analise
+          rm -rf test
+          ls lib
+
+      - name: Garantir o pacote de idioma portugues
+        run: flutter pub add flutter_localizations --sdk=flutter || true
+
+      - name: Garantir os pacotes extras
+        run: |
+          grep -q "firebase_core" pubspec.yaml || flutter pub add firebase_core
+          grep -q "firebase_messaging" pubspec.yaml || flutter pub add firebase_messaging
+          grep -q "lucide_icons_flutter" pubspec.yaml || flutter pub add lucide_icons_flutter
+          grep -q "google_fonts" pubspec.yaml || flutter pub add google_fonts
+          grep -q "vibration" pubspec.yaml || flutter pub add vibration
+          grep -q "flutter_local_notifications" pubspec.yaml || flutter pub add flutter_local_notifications
+          cat pubspec.yaml
+
+      - name: Conferir o arquivo do Shorebird
+        run: |
+          if [ ! -f shorebird.yaml ]; then
+            echo "ERRO: shorebird.yaml nao encontrado na pasta do projeto."
+            exit 1
+          fi
+          grep -q "shorebird.yaml" pubspec.yaml || {
+            echo "ERRO: falta a linha '- shorebird.yaml' na lista de assets do pubspec.yaml"
+            exit 1
+          }
+          cat shorebird.yaml
+
+      - name: Instalar o Shorebird
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: Descobrir a versao do app
+        id: versao
+        run: |
+          V=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')
+          echo "Versao do app: $V"
+          echo "valor=$V" >> "$GITHUB_OUTPUT"
+
+      - name: Limpar a trava de dependencias
+        run: rm -f pubspec.lock
+
+      # ---------------- VERSAO NOVA (gera APK) ----------------
+      - name: Gerar a versao nova
+        if: inputs.acao == 'versao-nova'
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: shorebird release android --artifact apk --no-confirm
+
+      - name: Disponibilizar o APK para download
+        if: inputs.acao == 'versao-nova'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-garcom-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      # ---------------- PLAY STORE (gera o .aab) ----------------
+      - name: Gerar o arquivo da Play Store
+        if: inputs.acao == 'play-store'
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: shorebird release android --no-confirm
+
+      - name: Disponibilizar o arquivo da Play Store
+        if: inputs.acao == 'play-store'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-garcom-playstore
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      # ---------------- CORRECAO PELO AR ----------------
+      - name: Enviar a correcao pelo ar
+        if: inputs.acao == 'correcao'
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+        run: |
+          shorebird patch android \
+            --release-version "${{ steps.versao.outputs.valor }}" \
+            --no-confirm
+
+      - name: Aviso final
+        if: inputs.acao == 'correcao'
+        run: |
+          echo "=================================================="
+          echo " Correcao publicada para a versao ${{ steps.versao.outputs.valor }}"
+          echo " Os apps se atualizam sozinhos na proxima abertura."
+          echo "=================================================="
