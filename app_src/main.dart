@@ -14,9 +14,6 @@ Future<void> main() async {
   // lê o tema (claro/escuro) que o garçom escolheu
   await carregarTema();
 
-  // lê se ele pediu para não ver mais os avisos de confirmação
-  await carregarAvisosDeConfirmacao();
-
   // lê o login salvo no celular antes de abrir a primeira tela
   await Sessao.carregar();
 

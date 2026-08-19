@@ -394,7 +394,21 @@ class _Capa extends StatelessWidget {
   }
 }
 
-/* ---------- caixinha de marcar (checkbox) ---------- */
+/* ================================================================== *
+ *  MODAL "ESQUECEU A SENHA?"
+ *  O garçom não redefine a senha sozinho: quem faz isso é o
+ *  estabelecimento no painel. Aqui a gente explica e leva pro WhatsApp.
+ * ================================================================== */
+Future<void> mostrarEsqueciSenha(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(.55),
+    builder: (_) => const _SheetEsqueciSenha(),
+  );
+}
+
 class _SheetEsqueciSenha extends StatelessWidget {
   const _SheetEsqueciSenha();
 
