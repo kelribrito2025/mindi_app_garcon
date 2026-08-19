@@ -385,7 +385,7 @@ jobs:
         if: inputs.acao == 'versao-nova'
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        run: shorebird release android --artifact apk --no-confirm
+        run: shorebird release android --artifact apk --no-confirm -- --no-tree-shake-icons
 
       - name: Disponibilizar o APK para download
         if: inputs.acao == 'versao-nova'
@@ -400,7 +400,7 @@ jobs:
         if: inputs.acao == 'play-store'
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-        run: shorebird release android --no-confirm
+        run: shorebird release android --no-confirm -- --no-tree-shake-icons
 
       - name: Disponibilizar o arquivo da Play Store
         if: inputs.acao == 'play-store'
@@ -418,7 +418,7 @@ jobs:
         run: |
           shorebird patch android \
             --release-version "${{ steps.versao.outputs.valor }}" \
-            --no-confirm
+            --no-confirm -- --no-tree-shake-icons
 
       - name: Aviso final
         if: inputs.acao == 'correcao'
