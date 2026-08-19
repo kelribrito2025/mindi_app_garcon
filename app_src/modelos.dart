@@ -33,13 +33,67 @@ class Espaco {
   final int id;
   final String nome;
   final int ordem;
-  const Espaco({required this.id, required this.nome, this.ordem = 0});
+
+  /// quantas mesas existem neste espaço (vem do servidor)
+  final int mesas;
+
+  const Espaco({
+    required this.id,
+    required this.nome,
+    this.ordem = 0,
+    this.mesas = 0,
+  });
 
   factory Espaco.fromJson(Map<String, dynamic> j) => Espaco(
         id: _int(j['id']),
         nome: (j['name'] ?? '').toString(),
         ordem: _int(j['sortOrder']),
+        mesas: _int(j['tableCount']),
       );
+}
+
+/* ================================================================== *
+ *  MESA NA LIXEIRA
+ * ================================================================== */
+class MesaExcluida {
+  final int id;
+  final int numero;
+  final String nome;
+  final int espacoId;
+  final String espacoNome;
+  final DateTime? excluidaEm;
+
+  const MesaExcluida({
+    required this.id,
+    required this.numero,
+    this.nome = '',
+    this.espacoId = 0,
+    this.espacoNome = '',
+    this.excluidaEm,
+  });
+
+  factory MesaExcluida.fromJson(Map<String, dynamic> j) => MesaExcluida(
+        id: _int(j['id']),
+        numero: _int(j['number']),
+        nome: (j['name'] ?? '').toString(),
+        espacoId: _int(j['spaceId']),
+        espacoNome: (j['spaceName'] ?? '').toString(),
+        excluidaEm: _data(j['deletedAt']),
+      );
+
+  String get titulo => nome.isNotEmpty ? nome : 'Mesa $numero';
+
+  /// "há 2 dias", "há 3 horas"
+  String get quando {
+    final d = excluidaEm;
+    if (d == null) return '';
+    final dif = DateTime.now().difference(d);
+    if (dif.inMinutes < 60) return 'há ${dif.inMinutes} min';
+    if (dif.inHours < 24) {
+      return 'há ${dif.inHours} ${dif.inHours == 1 ? "hora" : "horas"}';
+    }
+    return 'há ${dif.inDays} ${dif.inDays == 1 ? "dia" : "dias"}';
+  }
 }
 
 /* ================================================================== *
@@ -452,4 +506,72 @@ String formaPagamento(String? p) {
     default:
       return p == null || p.isEmpty ? '—' : p;
   }
+}
+
+/* ================================================================== *
+ *  COMANDA FECHADA — o que vem em GET /tables/:id/history
+ * ================================================================== */
+class ComandaFechada {
+  final int id;
+  final String numero;
+  final String status;
+  final double subtotal;
+  final double desconto;
+  final double taxaServico;
+  final double total;
+  final String pagamento;
+  final double pago;
+  final double troco;
+  final DateTime? abertaEm;
+  final DateTime? fechadaEm;
+  final List<ItemComanda> itens;
+
+  const ComandaFechada({
+    required this.id,
+    this.numero = '',
+    this.status = '',
+    this.subtotal = 0,
+    this.desconto = 0,
+    this.taxaServico = 0,
+    this.total = 0,
+    this.pagamento = '',
+    this.pago = 0,
+    this.troco = 0,
+    this.abertaEm,
+    this.fechadaEm,
+    this.itens = const [],
+  });
+
+  factory ComandaFechada.fromJson(Map<String, dynamic> j) {
+    final lista = (j['items'] is List) ? j['items'] as List : const [];
+    return ComandaFechada(
+      id: _int(j['id']),
+      numero: (j['tabNumber'] ?? '').toString(),
+      status: (j['status'] ?? '').toString(),
+      subtotal: _num(j['subtotal']),
+      desconto: _num(j['discount']),
+      taxaServico: _num(j['serviceCharge']),
+      total: _num(j['total']),
+      pagamento: (j['paymentMethod'] ?? '').toString(),
+      pago: _num(j['paidAmount']),
+      troco: _num(j['changeAmount']),
+      abertaEm: _data(j['openedAt']),
+      fechadaEm: _data(j['closedAt']),
+      itens: lista
+          .whereType<Map>()
+          .map((e) => ItemComanda.fromJson(e.cast<String, dynamic>()))
+          .toList(),
+    );
+  }
+
+  /// "19/08 às 16:45"
+  String get quando {
+    final d = fechadaEm ?? abertaEm;
+    if (d == null) return '';
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(d.day)}/${dois(d.month)} às ${dois(d.hour)}:${dois(d.minute)}';
+  }
+
+  int get totalDeItens =>
+      itens.fold(0, (soma, i) => soma + i.quantidade);
 }

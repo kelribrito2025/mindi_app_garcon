@@ -171,61 +171,6 @@ class _TelaConfigState extends State<TelaConfig> {
                           valor: _formasAceitas),
                     ]),
 
-                    const _Rotulo('APARÊNCIA'),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: T.card,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: T.borda),
-                        boxShadow: sombraCard(),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: T.amareloSuave,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                                modoEscuro.value ? Ico.lua : Ico.sol,
-                                size: 18,
-                                color: T.amarelo),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Tema escuro',
-                                    style: TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: T.ink)),
-                                Text(
-                                    modoEscuro.value
-                                        ? 'Ligado'
-                                        : 'Desligado',
-                                    style: TextStyle(
-                                        fontSize: 12.5, color: T.inkSoft)),
-                              ],
-                            ),
-                          ),
-                          ToggleMindi(
-                            ligado: modoEscuro.value,
-                            aoMudar: (v) async {
-                              await salvarTema(v);
-                              if (mounted) setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-
                     const SizedBox(height: 16),
                     Text(
                       'A taxa de serviço e as formas de pagamento são '

@@ -5,6 +5,7 @@ import 'api.dart';
 import 'modelos.dart';
 import 'sessao.dart';
 import 'sheet_fechar.dart';
+import 'sheet_lancar_itens.dart';
 
 /* ================================================================== *
  *  MODAL DA MESA
@@ -109,6 +110,25 @@ class _SheetMesaState extends State<_SheetMesa> {
       }
     } finally {
       if (mounted) setState(() => _ocupado = false);
+    }
+  }
+
+  Future<void> _lancarItens() async {
+    final comanda = _comanda;
+    if (comanda == null || comanda.id == 0) {
+      _avisar('Comanda ainda não carregou. Tente de novo.');
+      return;
+    }
+    final enviou = await mostrarLancarItens(
+      context,
+      mesa: _mesa,
+      comandaId: comanda.id,
+      totalAtual: comanda.total,
+    );
+    if (enviou == true && mounted) {
+      _mudou = true;
+      _avisar('Itens lançados na mesa');
+      await _carregar();
     }
   }
 
@@ -499,14 +519,20 @@ class _SheetMesaState extends State<_SheetMesa> {
       );
     }
 
+    // "Pedir conta" e "Fechar mesa" só fazem sentido quando existe
+    // alguma coisa lançada. Mesa recém-aberta só precisa de "Lançar itens".
+    final temItens =
+        _comanda?.itens.where((i) => !i.cancelado).isNotEmpty ?? false;
+
     return Column(
       children: [
         _BotaoGrande(
           texto: 'Lançar itens',
           icone: Ico.cardapio,
           carregando: false,
-          onTap: () => _avisar('Cardápio entra na próxima etapa.'),
+          onTap: _lancarItens,
         ),
+        if (temItens) ...[
         const SizedBox(height: 9),
         Row(
           children: [
@@ -531,6 +557,7 @@ class _SheetMesaState extends State<_SheetMesa> {
             ),
           ],
         ),
+        ],
       ],
     );
   }

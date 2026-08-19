@@ -5,6 +5,7 @@ import 'api.dart';
 import 'sessao.dart';
 import 'estado.dart';
 import 'notificacoes.dart';
+import 'cardapio.dart';
 import 'tela_trocar_senha.dart';
 import 'tela_editar_perfil.dart';
 import 'tela_login.dart';
@@ -85,6 +86,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
     } catch (_) {
       // mesmo sem internet o app encerra a sessão local
     }
+    Cardapio.limpar();
     await Notificacoes.esquecer();
     await Sessao.limpar();
     if (!mounted) return;

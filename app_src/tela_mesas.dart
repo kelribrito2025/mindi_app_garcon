@@ -8,6 +8,7 @@ import 'modelos.dart';
 import 'sheet_mesa.dart';
 import 'sheet_criar_mesas.dart';
 import 'sheet_apagar_espaco.dart';
+import 'sheet_gerenciar.dart';
 
 /* ================================================================== *
  *  ABA MESAS — o mapa do salão
@@ -27,6 +28,10 @@ class _TelaMesasState extends State<TelaMesas> {
   List<Espaco> _espacos = [];
   List<Mesa> _mesas = [];
   int _espacoAberto = 0; // 0 = ainda não carregou nenhum espaço
+
+  /// filtro pela situação da mesa, escolhido na legenda do topo.
+  /// null = mostra todas. Valores: 'ocupada', 'conta', 'livre'
+  String? _filtro;
   bool _carregando = false;
   bool _primeiraVez = true;
   String? _erro;
@@ -87,8 +92,24 @@ class _TelaMesasState extends State<TelaMesas> {
     }
   }
 
-  List<Mesa> get _visiveis =>
+  /// todas as mesas do espaço aberto (é o que a legenda conta)
+  List<Mesa> get _doEspaco =>
       _mesas.where((m) => m.espacoId == _espacoAberto).toList();
+
+  /// o que aparece na grade: o espaço aberto, já com o filtro aplicado
+  List<Mesa> get _visiveis {
+    final lista = _doEspaco;
+    switch (_filtro) {
+      case 'ocupada':
+        return lista.where((m) => !m.livre && !m.pedindoConta).toList();
+      case 'conta':
+        return lista.where((m) => m.pedindoConta).toList();
+      case 'livre':
+        return lista.where((m) => m.livre).toList();
+      default:
+        return lista;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -138,9 +159,9 @@ class _TelaMesasState extends State<TelaMesas> {
    *  RESUMO DENTRO DO TOPO VERMELHO
    *  Reservada conta como ocupada: no salão a mesa não está livre.
    * ---------------------------------------------------------------- */
-  int get _total => _visiveis.length;
-  int get _pedindoConta => _visiveis.where((m) => m.pedindoConta).length;
-  int get _livres => _visiveis.where((m) => m.livre).length;
+  int get _total => _doEspaco.length;
+  int get _pedindoConta => _doEspaco.where((m) => m.pedindoConta).length;
+  int get _livres => _doEspaco.where((m) => m.livre).length;
   int get _ocupadas => _total - _livres - _pedindoConta;
 
   /// "13/19 ocupadas" — texto simples, sem moldura
@@ -185,45 +206,66 @@ class _TelaMesasState extends State<TelaMesas> {
     );
   }
 
+  /// tocar na legenda filtra a grade; tocar de novo mostra tudo
   Widget _legenda() {
     return Row(
       children: [
-        _pontinho(Colors.white, '$_ocupadas ocupadas'),
-        const SizedBox(width: 16),
-        _pontinho(const Color(0xFFFCD34D), '$_pedindoConta conta'),
-        const SizedBox(width: 16),
-        _pontinho(Colors.white.withOpacity(.45), '$_livres livres'),
+        _pontinho(Colors.white, '$_ocupadas ocupadas', 'ocupada'),
+        const SizedBox(width: 8),
+        _pontinho(const Color(0xFFFCD34D), '$_pedindoConta conta', 'conta'),
+        const SizedBox(width: 8),
+        _pontinho(Colors.white.withOpacity(.45), '$_livres livres', 'livre'),
       ],
     );
   }
 
-  Widget _pontinho(Color cor, String texto) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: BoxDecoration(color: cor, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(texto,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(.92))),
-        ],
-      );
+  Widget _pontinho(Color cor, String texto, String chave) {
+    final ligado = _filtro == chave;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _filtro = ligado ? null : chave),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: ligado ? Colors.white.withOpacity(.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: ligado
+                  ? Colors.white.withOpacity(.35)
+                  : Colors.transparent),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 7,
+              height: 7,
+              decoration: BoxDecoration(color: cor, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(texto,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: ligado ? FontWeight.w800 : FontWeight.w600,
+                    color: Colors.white.withOpacity(ligado ? 1 : .92))),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _filtros() {
     return SizedBox(
       height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        // +1 no fim da lista: o botão de criar mesas
-        itemCount: _espacos.length + 1,
+        // +2 no fim da lista: criar mesas e gerenciar
+        itemCount: _espacos.length + 2,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           if (i == _espacos.length) return _botaoCriar();
+          if (i == _espacos.length + 1) return _botaoGerenciar();
           final e = _espacos[i];
           final ativo = e.id == _espacoAberto;
           return AfundaAoTocar(
@@ -265,6 +307,28 @@ class _TelaMesasState extends State<TelaMesas> {
         child: Icon(Ico.maisItem, size: 18, color: T.redDark),
       ),
     );
+  }
+
+  /// engrenagem no fim da fila: renomear espaço e restaurar mesa
+  Widget _botaoGerenciar() {
+    return AfundaAoTocar(
+      onTap: _gerenciar,
+      child: Container(
+        width: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: T.borda),
+        ),
+        child: Icon(Ico.ajustes, size: 17, color: T.inkMedio),
+      ),
+    );
+  }
+
+  Future<void> _gerenciar() async {
+    final mudou = await mostrarGerenciar(context, _espacos);
+    if (mudou == true && mounted) await _atualizar();
   }
 
   Future<void> _apagarEspaco(Espaco e) async {
@@ -314,6 +378,16 @@ class _TelaMesasState extends State<TelaMesas> {
     if (_espacos.isEmpty) {
       return _vazio(Ico.mesas, 'Nenhum espaço cadastrado',
           'Toque no + ao lado para criar o primeiro espaço com as mesas.');
+    }
+
+    if (_visiveis.isEmpty && _filtro != null) {
+      const nomes = {
+        'ocupada': 'ocupada',
+        'conta': 'com a conta pedida',
+        'livre': 'livre',
+      };
+      return _vazio(Ico.mesas, 'Nenhuma mesa ${nomes[_filtro]}',
+          'Toque de novo na legenda do topo para ver todas.');
     }
 
     if (_visiveis.isEmpty) {

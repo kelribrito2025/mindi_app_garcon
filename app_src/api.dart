@@ -440,4 +440,34 @@ class Api {
   /// (endpoint ainda a confirmar com o backend)
   static Future<void> apagarEspaco(int id) =>
       _enviar('DELETE', '$_raiz/spaces/$id');
+
+  /// PUT /api/waiter/spaces/:id — muda o nome do espaço
+  static Future<void> renomearEspaco(int id, String nome) =>
+      _enviar('PUT', '$_raiz/spaces/$id', corpo: {'name': nome});
+
+  /// GET /api/waiter/tables/deleted — mesas na lixeira
+  static Future<List<Map<String, dynamic>>> mesasExcluidas() async =>
+      _lista(await _enviar('GET', '$_raiz/tables/deleted'), 'tables');
+
+  /// POST /api/waiter/tables/:id/restore — traz a mesa de volta.
+  /// Devolve {success, number, renumbered}
+  static Future<Map<String, dynamic>> restaurarMesa(int id) async =>
+      _mapa(await _enviar('POST', '$_raiz/tables/$id/restore'));
+
+  /* ----------------------------------------------------------------
+     Identificação, impressão e histórico.
+     ---------------------------------------------------------------- */
+
+  /// PUT /api/waiter/tables/:id/label — identificação do cliente na mesa
+  static Future<void> identificarMesa(int id, String identificacao) =>
+      _enviar('PUT', '$_raiz/tables/$id/label',
+          corpo: {'label': identificacao});
+
+  /// POST /api/waiter/tabs/:id/print — manda a comanda para a impressora
+  static Future<void> imprimirComanda(int comandaId) =>
+      _enviar('POST', '$_raiz/tabs/$comandaId/print');
+
+  /// GET /api/waiter/tables/:id/history — pedidos já feitos nesta mesa
+  static Future<List<Map<String, dynamic>>> historicoDaMesa(int id) async =>
+      _lista(await _enviar('GET', '$_raiz/tables/$id/history'), 'history');
 }

@@ -76,4 +76,8 @@ class Ico {
   static const IconData ajustes = LucideIcons.settings;
   static const IconData pix = LucideIcons.qrCode;
   static const IconData cartao = LucideIcons.creditCard;
+  static const IconData editar = LucideIcons.pencil;
+  static const IconData voltarSeta = LucideIcons.rotateCcw;
+  static const IconData busca = LucideIcons.search;
+  static const IconData impressora = LucideIcons.printer;
 }
