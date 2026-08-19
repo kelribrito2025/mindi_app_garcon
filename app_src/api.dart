@@ -117,11 +117,11 @@ class Api {
 
     // Casos em que não adianta continuar logado
     final contaFora = r.statusCode == 403 &&
-        (codigo == 'ACCOUNT_DISABLED' ||
-            codigo == 'DELETED' ||
-            codigo == 'DISABLED');
+        (codigo == 'ACCOUNT_DISABLED' || codigo == 'PERMISSION_DENIED');
     final sessaoMorta = r.statusCode == 401 &&
-        (codigo == 'SESSION_REVOKED' || codigo == 'UNAUTHORIZED');
+        (codigo == 'SESSION_REVOKED' ||
+            codigo == 'UNAUTHORIZED' ||
+            codigo == 'INVALID_REFRESH_TOKEN');
 
     if ((contaFora || sessaoMorta) && Sessao.logado) {
       Sessao.limpar();
@@ -242,11 +242,10 @@ class Api {
         corpo: {'email': email.trim(), 'password': senha}, comToken: false);
 
     await Sessao.salvar(
-      token: r['token'] as String,
+      token: (r['accessToken'] ?? r['token']) as String,
       refreshToken: r['refreshToken'] as String?,
-      garcom: (r['waiter'] ?? r['user'] ?? r['collaborator']) is Map
-          ? ((r['waiter'] ?? r['user'] ?? r['collaborator']) as Map)
-              .cast<String, dynamic>()
+      garcom: r['user'] is Map
+          ? (r['user'] as Map).cast<String, dynamic>()
           : null,
     );
   }
@@ -263,7 +262,7 @@ class Api {
       if (r.statusCode != 200) return false;
       final c = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>;
       await Sessao.atualizarToken(
-        token: c['token'] as String,
+        token: (c['accessToken'] ?? c['token']) as String,
         refreshToken: c['refreshToken'] as String?,
       );
       return true;
@@ -284,12 +283,11 @@ class Api {
 
   /// GET /api/waiter/me
   static Future<Map<String, dynamic>> meusDados() async =>
-      _mapa(await _enviar('GET', '$_raiz/me'), 'waiter');
+      _mapa(await _enviar('GET', '$_raiz/me'));
 
   /// PUT /api/waiter/me/push-token
-  static Future<void> registrarPushToken(String token) => _enviar(
-      'PUT', '$_raiz/me/push-token',
-      corpo: {'pushToken': token, 'platform': 'android'});
+  static Future<void> registrarPushToken(String token) =>
+      _enviar('PUT', '$_raiz/me/push-token', corpo: {'token': token});
 
   /* ================================================================ *
    *  2. MESAS
@@ -305,37 +303,30 @@ class Api {
 
   /// GET /api/waiter/tables/:id — detalhe com a comanda
   static Future<Map<String, dynamic>> mesa(int id) async =>
-      _mapa(await _enviar('GET', '$_raiz/tables/$id'), 'table');
+      _mapa(await _enviar('GET', '$_raiz/tables/$id'));
 
   /// POST /api/waiter/tables/:id/open
   static Future<Map<String, dynamic>> abrirMesa(int id,
-      {required int pessoas, String? identificacao}) async {
+      {required int pessoas}) async {
     final r = await _enviar('POST', '$_raiz/tables/$id/open',
-        corpo: {
-          'people': pessoas,
-          if (identificacao != null && identificacao.isNotEmpty)
-            'label': identificacao,
-        },
-        chaveUnica: novaChaveUnica());
-    return _mapa(r, 'table');
+        corpo: {'guests': pessoas}, chaveUnica: novaChaveUnica());
+    return _mapa(r);
   }
 
   /// POST /api/waiter/tables/:id/close
-  static Future<Map<String, dynamic>> fecharMesa(
+  static Future<void> fecharMesa(
     int id, {
     required String formaPagamento,
-    required String valorPago,
-    String? troco,
-  }) async {
-    final r = await _enviar('POST', '$_raiz/tables/$id/close',
-        corpo: {
-          'paymentMethod': formaPagamento,
-          'amountPaid': valorPago,
-          if (troco != null) 'change': troco,
-        },
-        chaveUnica: novaChaveUnica());
-    return _mapa(r, 'table');
-  }
+    required double valorPago,
+    double troco = 0,
+  }) =>
+      _enviar('POST', '$_raiz/tables/$id/close',
+          corpo: {
+            'paymentMethod': formaPagamento,
+            'paidAmount': valorPago,
+            'changeAmount': troco,
+          },
+          chaveUnica: novaChaveUnica());
 
   /// POST /api/waiter/tables/:id/request-bill
   static Future<void> pedirConta(int id) =>
@@ -350,8 +341,13 @@ class Api {
       _lista(await _enviar('GET', '$_raiz/categories'), 'categories');
 
   /// GET /api/waiter/products
-  static Future<List<Map<String, dynamic>>> produtos() async =>
-      _lista(await _enviar('GET', '$_raiz/products'), 'products');
+  static Future<List<Map<String, dynamic>>> produtos({int? categoriaId}) async =>
+      _lista(
+          await _enviar('GET', '$_raiz/products',
+              query: categoriaId == null
+                  ? null
+                  : {'categoryId': '$categoriaId'}),
+          'products');
 
   /// GET /api/waiter/complements — todos de uma vez, o app guarda
   static Future<List<Map<String, dynamic>>> complementos() async =>
@@ -362,14 +358,12 @@ class Api {
    * ================================================================ */
 
   /// POST /api/waiter/tabs/:id/add-items
-  static Future<Map<String, dynamic>> adicionarItens(
+  static Future<void> adicionarItens(
     int comandaId,
     List<Map<String, dynamic>> itens,
-  ) async {
-    final r = await _enviar('POST', '$_raiz/tabs/$comandaId/add-items',
-        corpo: {'items': itens}, chaveUnica: novaChaveUnica());
-    return _mapa(r, 'tab');
-  }
+  ) =>
+      _enviar('POST', '$_raiz/tabs/$comandaId/add-items',
+          corpo: {'items': itens}, chaveUnica: novaChaveUnica());
 
   /* ----------------------------------------------------------------
      ATENÇÃO: estes dois endpoints ainda NÃO estão na documentação da

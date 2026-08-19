@@ -13,7 +13,7 @@ class ItemAba {
 
 const kAbas = [
   ItemAba('Mesas', Ico.mesas),
-  ItemAba('Cozinha', Ico.cozinha),
+  ItemAba('Ajustes', Ico.ajustes),
   ItemAba('Perfil', Ico.perfil),
 ];
 

@@ -3,7 +3,7 @@ import 'tema.dart';
 import 'estado.dart';
 import 'tab_bar_curva.dart';
 import 'tela_mesas.dart';
-import 'tela_cozinha.dart';
+import 'tela_config.dart';
 import 'tela_perfil.dart';
 import 'tela_login.dart';
 
@@ -25,7 +25,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   final List<Widget> _telas = const [
     TelaMesas(),
-    TelaCozinha(),
+    TelaConfig(),
     TelaPerfil(),
   ];
 

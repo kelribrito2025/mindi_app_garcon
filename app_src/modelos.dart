@@ -1,9 +1,8 @@
 /* ================================================================== *
  *  MODELOS — traduzem o JSON da API para o app
  *
- *  ATENÇÃO: estes modelos foram montados a partir do PLANO da API.
- *  Quando a documentação final chegar, os nomes dos campos podem
- *  mudar — o ajuste é só aqui dentro, as telas não precisam mexer.
+ *  Baseados na documentação "API REST — App Garçom (Mindi)" v1.0.
+ *  Se um campo mudar no servidor, o conserto é só aqui dentro.
  * ================================================================== */
 
 /// converte "15.50", 15.5 ou null em número
@@ -27,19 +26,64 @@ String reais(double v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
 /// como o servidor manda dinheiro em texto ("15.50"), o app devolve
 /// no mesmo formato quando precisa enviar de volta
 String paraServidor(double v) => v.toStringAsFixed(2);
-
 /* ================================================================== *
- *  ESPAÇO — Salão, Varanda, Área externa...
+ *  ESPAÇO — Salão, Varanda, Terraço...
  * ================================================================== */
 class Espaco {
   final int id;
   final String nome;
-  const Espaco({required this.id, required this.nome});
+  final int ordem;
+  const Espaco({required this.id, required this.nome, this.ordem = 0});
 
   factory Espaco.fromJson(Map<String, dynamic> j) => Espaco(
         id: _int(j['id']),
         nome: (j['name'] ?? '').toString(),
+        ordem: _int(j['sortOrder']),
       );
+}
+
+/* ================================================================== *
+ *  RESUMO DA COMANDA — o que vem junto de cada mesa em /tables
+ * ================================================================== */
+class ResumoComanda {
+  final int id;
+  final String numero;
+  final String status;
+  final double subtotal;
+  final double taxaServico;
+  final double desconto;
+  final double total;
+  final int itens;
+  final double pago;
+  final DateTime? abertaEm;
+
+  const ResumoComanda({
+    required this.id,
+    this.numero = '',
+    this.status = '',
+    this.subtotal = 0,
+    this.taxaServico = 0,
+    this.desconto = 0,
+    this.total = 0,
+    this.itens = 0,
+    this.pago = 0,
+    this.abertaEm,
+  });
+
+  factory ResumoComanda.fromJson(Map<String, dynamic> j) => ResumoComanda(
+        id: _int(j['id']),
+        numero: (j['tabNumber'] ?? '').toString(),
+        status: (j['status'] ?? '').toString(),
+        subtotal: _num(j['subtotal']),
+        taxaServico: _num(j['serviceCharge']),
+        desconto: _num(j['discount']),
+        total: _num(j['total']),
+        itens: _int(j['itemCount']),
+        pago: _num(j['paidAmount']),
+        abertaEm: _data(j['openedAt']),
+      );
+
+  double get falta => (total - pago) < 0 ? 0 : total - pago;
 }
 
 /* ================================================================== *
@@ -47,52 +91,77 @@ class Espaco {
  * ================================================================== */
 class Mesa {
   final int id;
-  final String numero;
-  final String status; // free, occupied, reserved, requesting_bill
-  final int espacoId;
-  final String espacoNome;
+  final int numero;
+  final String nome;
+  final String mostrarNumero;
+  final int capacidade;
+  final String status;
   final int pessoas;
-  final String identificacao; // "João", "Aniversário"
-  final double total;
-  final int itens;
-  final DateTime? abertaEm;
-  final int? comandaId;
-  final bool minha;
+  final int espacoId;
+  final String identificacao;
+  final DateTime? ocupadaEm;
+  final DateTime? contaPedidaEm;
+  final String contaPedidaPor;
+  final ResumoComanda? comanda;
 
   const Mesa({
     required this.id,
     required this.numero,
-    required this.status,
-    this.espacoId = 0,
-    this.espacoNome = '',
+    this.nome = '',
+    this.mostrarNumero = '',
+    this.capacidade = 0,
+    this.status = 'free',
     this.pessoas = 0,
+    this.espacoId = 0,
     this.identificacao = '',
-    this.total = 0,
-    this.itens = 0,
-    this.abertaEm,
-    this.comandaId,
-    this.minha = false,
+    this.ocupadaEm,
+    this.contaPedidaEm,
+    this.contaPedidaPor = '',
+    this.comanda,
   });
 
-  factory Mesa.fromJson(Map<String, dynamic> j) => Mesa(
-        id: _int(j['id']),
-        numero: (j['number'] ?? j['name'] ?? j['id']).toString(),
-        status: (j['status'] ?? 'free').toString(),
-        espacoId: _int(j['spaceId']),
-        espacoNome: (j['spaceName'] ?? '').toString(),
-        pessoas: _int(j['people']),
-        identificacao: (j['label'] ?? '').toString(),
-        total: _num(j['total']),
-        itens: _int(j['itemCount']),
-        abertaEm: _data(j['openedAt']),
-        comandaId: j['tabId'] == null ? null : _int(j['tabId']),
-        minha: j['isMine'] == true,
-      );
+  factory Mesa.fromJson(Map<String, dynamic> j) {
+    final t = j['tab'];
+    return Mesa(
+      id: _int(j['id']),
+      numero: _int(j['number']),
+      nome: (j['name'] ?? '').toString(),
+      mostrarNumero: (j['displayNumber'] ?? '').toString(),
+      capacidade: _int(j['capacity']),
+      status: (j['status'] ?? 'free').toString(),
+      pessoas: _int(j['currentGuests']),
+      espacoId: _int(j['spaceId']),
+      identificacao: (j['label'] ?? '').toString(),
+      ocupadaEm: _data(j['occupiedAt']),
+      contaPedidaEm: _data(j['requestingBillAt']),
+      contaPedidaPor: (j['requestingBillBy'] ?? '').toString(),
+      comanda:
+          t is Map ? ResumoComanda.fromJson(t.cast<String, dynamic>()) : null,
+    );
+  }
+
+  /// o que aparece grande no card
+  String get titulo =>
+      mostrarNumero.isNotEmpty ? mostrarNumero : numero.toString();
 
   bool get livre => status == 'free';
   bool get ocupada => status == 'occupied';
   bool get reservada => status == 'reserved';
   bool get pedindoConta => status == 'requesting_bill';
+
+  double get total => comanda?.total ?? 0;
+  int get itens => comanda?.itens ?? 0;
+  int? get comandaId => comanda?.id;
+
+  /// "45min" ou "1h20" desde que a mesa foi aberta
+  String get tempoAberta {
+    final d = ocupadaEm;
+    if (d == null) return '';
+    final m = DateTime.now().difference(d).inMinutes;
+    if (m < 1) return 'agora';
+    if (m < 60) return '${m}min';
+    return '${m ~/ 60}h${(m % 60).toString().padLeft(2, '0')}';
+  }
 }
 
 /* ================================================================== *
@@ -100,83 +169,116 @@ class Mesa {
  * ================================================================== */
 class ItemComanda {
   final int id;
+  final int produtoId;
   final String nome;
   final int quantidade;
-  final double preco;
+  final double precoUnitario;
+  final double precoTotal;
   final String observacao;
-  final String status; // pending, preparing, ready, delivered
+  final String status;
   final List<String> complementos;
 
   const ItemComanda({
     required this.id,
+    this.produtoId = 0,
     required this.nome,
     required this.quantidade,
-    required this.preco,
+    this.precoUnitario = 0,
+    this.precoTotal = 0,
     this.observacao = '',
     this.status = '',
     this.complementos = const [],
   });
 
   factory ItemComanda.fromJson(Map<String, dynamic> j) {
-    final comps = (j['complements'] is List) ? j['complements'] as List : const [];
+    final comps =
+        (j['complements'] is List) ? j['complements'] as List : const [];
     return ItemComanda(
       id: _int(j['id']),
-      nome: (j['name'] ?? j['productName'] ?? '').toString(),
+      produtoId: _int(j['productId']),
+      nome: (j['productName'] ?? '').toString(),
       quantidade: _int(j['quantity']),
-      preco: _num(j['price'] ?? j['unitPrice']),
+      precoUnitario: _num(j['unitPrice']),
+      precoTotal: _num(j['totalPrice']),
       observacao: (j['notes'] ?? '').toString(),
       status: (j['status'] ?? '').toString(),
-      complementos: comps
-          .whereType<Map>()
-          .map((c) => (c['name'] ?? '').toString())
-          .where((n) => n.isNotEmpty)
-          .toList(),
+      complementos: comps.whereType<Map>().map((c) {
+        final q = _int(c['quantity']);
+        final n = (c['name'] ?? '').toString();
+        return q > 1 ? '${q}x $n' : n;
+      }).where((n) => n.isNotEmpty).toList(),
     );
   }
 
-  double get subtotal => preco * quantidade;
   bool get pronto => status == 'ready';
+  bool get cancelado => status == 'cancelled';
+
+  String get situacao {
+    switch (status) {
+      case 'pending':
+        return 'Aguardando';
+      case 'preparing':
+        return 'Preparando';
+      case 'ready':
+        return 'Pronto';
+      case 'delivered':
+        return 'Entregue';
+      case 'cancelled':
+        return 'Cancelado';
+      default:
+        return '';
+    }
+  }
 }
 
 /* ================================================================== *
- *  COMANDA
+ *  COMANDA COMPLETA — vem em GET /tables/:id
  * ================================================================== */
 class Comanda {
   final int id;
-  final int mesaId;
-  final List<ItemComanda> itens;
+  final String numero;
+  final String status;
   final double subtotal;
   final double taxaServico;
+  final double desconto;
   final double total;
   final double pago;
+  final DateTime? abertaEm;
+  final List<ItemComanda> itens;
 
   const Comanda({
     required this.id,
-    required this.mesaId,
-    this.itens = const [],
+    this.numero = '',
+    this.status = '',
     this.subtotal = 0,
     this.taxaServico = 0,
+    this.desconto = 0,
     this.total = 0,
     this.pago = 0,
+    this.abertaEm,
+    this.itens = const [],
   });
 
   factory Comanda.fromJson(Map<String, dynamic> j) {
     final lista = (j['items'] is List) ? j['items'] as List : const [];
     return Comanda(
       id: _int(j['id']),
-      mesaId: _int(j['tableId']),
+      numero: (j['tabNumber'] ?? '').toString(),
+      status: (j['status'] ?? '').toString(),
+      subtotal: _num(j['subtotal']),
+      taxaServico: _num(j['serviceCharge']),
+      desconto: _num(j['discount']),
+      total: _num(j['total']),
+      pago: _num(j['paidAmount']),
+      abertaEm: _data(j['openedAt']),
       itens: lista
           .whereType<Map>()
           .map((e) => ItemComanda.fromJson(e.cast<String, dynamic>()))
           .toList(),
-      subtotal: _num(j['subtotal']),
-      taxaServico: _num(j['serviceFee']),
-      total: _num(j['total']),
-      pago: _num(j['paidAmount']),
     );
   }
 
-  double get falta => total - pago;
+  double get falta => (total - pago) < 0 ? 0 : total - pago;
 }
 
 /* ================================================================== *
@@ -185,12 +287,23 @@ class Comanda {
 class Categoria {
   final int id;
   final String nome;
+  final String descricao;
+  final int ordem;
   final int produtos;
-  const Categoria({required this.id, required this.nome, this.produtos = 0});
+
+  const Categoria({
+    required this.id,
+    required this.nome,
+    this.descricao = '',
+    this.ordem = 0,
+    this.produtos = 0,
+  });
 
   factory Categoria.fromJson(Map<String, dynamic> j) => Categoria(
         id: _int(j['id']),
         nome: (j['name'] ?? '').toString(),
+        descricao: (j['description'] ?? '').toString(),
+        ordem: _int(j['sortOrder']),
         produtos: _int(j['productCount']),
       );
 }
@@ -201,9 +314,12 @@ class Produto {
   final String nome;
   final String descricao;
   final double preco;
+  final double? precoPromocional;
   final String imagem;
-  final bool disponivel;
-  final List<int> gruposDeComplemento;
+  final String status;
+  final bool controlaEstoque;
+  final int? estoque;
+  final bool temComplementos;
 
   const Produto({
     required this.id,
@@ -211,25 +327,38 @@ class Produto {
     required this.nome,
     this.descricao = '',
     this.preco = 0,
+    this.precoPromocional,
     this.imagem = '',
-    this.disponivel = true,
-    this.gruposDeComplemento = const [],
+    this.status = 'active',
+    this.controlaEstoque = false,
+    this.estoque,
+    this.temComplementos = false,
   });
 
   factory Produto.fromJson(Map<String, dynamic> j) {
-    final grupos = (j['complementGroupIds'] is List)
-        ? (j['complementGroupIds'] as List).map(_int).toList()
-        : <int>[];
+    final imgs = (j['images'] is List) ? j['images'] as List : const [];
     return Produto(
       id: _int(j['id']),
       categoriaId: _int(j['categoryId']),
       nome: (j['name'] ?? '').toString(),
       descricao: (j['description'] ?? '').toString(),
       preco: _num(j['price']),
-      imagem: (j['imageUrl'] ?? j['image'] ?? '').toString(),
-      disponivel: j['available'] != false && j['isActive'] != false,
-      gruposDeComplemento: grupos,
+      precoPromocional:
+          j['promotionalPrice'] == null ? null : _num(j['promotionalPrice']),
+      imagem: imgs.isEmpty ? '' : '${imgs.first}',
+      status: (j['status'] ?? 'active').toString(),
+      controlaEstoque: j['hasStock'] == true,
+      estoque: j['stockQuantity'] == null ? null : _int(j['stockQuantity']),
+      temComplementos: j['hasComplements'] == true,
     );
+  }
+
+  double get precoValendo => precoPromocional ?? preco;
+
+  bool get disponivel {
+    if (status != 'active') return false;
+    if (controlaEstoque && (estoque ?? 0) <= 0) return false;
+    return true;
   }
 }
 
@@ -237,45 +366,90 @@ class OpcaoComplemento {
   final int id;
   final String nome;
   final double preco;
-  const OpcaoComplemento(
-      {required this.id, required this.nome, this.preco = 0});
+  final double? precoPromocional;
+  final bool ativo;
+  final bool controlaEstoque;
+  final int? estoque;
 
-  factory OpcaoComplemento.fromJson(Map<String, dynamic> j) =>
-      OpcaoComplemento(
+  const OpcaoComplemento({
+    required this.id,
+    required this.nome,
+    this.preco = 0,
+    this.precoPromocional,
+    this.ativo = true,
+    this.controlaEstoque = false,
+    this.estoque,
+  });
+
+  factory OpcaoComplemento.fromJson(Map<String, dynamic> j) => OpcaoComplemento(
         id: _int(j['id']),
         nome: (j['name'] ?? '').toString(),
         preco: _num(j['price']),
+        precoPromocional:
+            j['promotionalPrice'] == null ? null : _num(j['promotionalPrice']),
+        ativo: j['isActive'] != false,
+        controlaEstoque: j['hasStock'] == true,
+        estoque: j['stockQuantity'] == null ? null : _int(j['stockQuantity']),
       );
+
+  double get precoValendo => precoPromocional ?? preco;
+
+  bool get disponivel {
+    if (!ativo) return false;
+    if (controlaEstoque && (estoque ?? 0) <= 0) return false;
+    return true;
+  }
 }
 
 class GrupoComplemento {
   final int id;
+  final int produtoId;
   final String nome;
   final int minimo;
   final int maximo;
+  final bool obrigatorio;
+  final String tipo;
   final List<OpcaoComplemento> opcoes;
 
   const GrupoComplemento({
     required this.id,
+    required this.produtoId,
     required this.nome,
     this.minimo = 0,
     this.maximo = 0,
+    this.obrigatorio = false,
+    this.tipo = 'complement',
     this.opcoes = const [],
   });
 
   factory GrupoComplemento.fromJson(Map<String, dynamic> j) {
-    final lista = (j['options'] is List) ? j['options'] as List : const [];
+    final lista = (j['items'] is List) ? j['items'] as List : const [];
     return GrupoComplemento(
       id: _int(j['id']),
+      produtoId: _int(j['productId']),
       nome: (j['name'] ?? '').toString(),
-      minimo: _int(j['min']),
-      maximo: _int(j['max']),
+      minimo: _int(j['minQuantity']),
+      maximo: _int(j['maxQuantity']),
+      obrigatorio: j['isRequired'] == true,
+      tipo: (j['groupType'] ?? 'complement').toString(),
       opcoes: lista
           .whereType<Map>()
           .map((e) => OpcaoComplemento.fromJson(e.cast<String, dynamic>()))
           .toList(),
     );
   }
+}
 
-  bool get obrigatorio => minimo > 0;
+/// nome bonito da forma de pagamento
+String formaPagamento(String? p) {
+  switch ((p ?? '').toLowerCase()) {
+    case 'cash':
+      return 'Dinheiro';
+    case 'pix':
+      return 'PIX';
+    case 'card':
+      return 'Cartão';
+    default:
+      return p == null || p.isEmpty ? '—' : p;
+  }
 }

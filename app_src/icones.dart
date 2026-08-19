@@ -74,4 +74,6 @@ class Ico {
   static const IconData lixeira = LucideIcons.trash2;
   static const IconData conta = LucideIcons.banknote;
   static const IconData ajustes = LucideIcons.settings;
+  static const IconData pix = LucideIcons.qrCode;
+  static const IconData cartao = LucideIcons.creditCard;
 }

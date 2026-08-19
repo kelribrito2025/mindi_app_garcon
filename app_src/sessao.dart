@@ -22,8 +22,22 @@ class Sessao {
 
   static String get email => (garcom['email'] ?? '').toString();
 
+  /// bloco "establishment" que vem no login e no /me
+  static Map<String, dynamic> get loja {
+    final e = garcom['establishment'];
+    return e is Map ? e.cast<String, dynamic>() : const {};
+  }
+
   /// nome do restaurante
-  static String get empresa => (garcom['establishmentName'] ?? '').toString();
+  static String get empresa => (loja['name'] ?? '').toString();
+
+  /// taxa de serviço em % (ex.: 10.0)
+  static double get taxaServico =>
+      double.tryParse('${loja['serviceChargePercent'] ?? 0}'.replaceAll(',', '.')) ?? 0;
+
+  static bool get aceitaDinheiro => loja['acceptsCash'] == true;
+  static bool get aceitaCartao => loja['acceptsCard'] == true;
+  static bool get aceitaPix => loja['acceptsPix'] == true;
 
   /// o garçom é o dono do estabelecimento?
   static bool get dono => garcom['role']?.toString() == 'owner';

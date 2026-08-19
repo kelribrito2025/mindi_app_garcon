@@ -5,6 +5,7 @@ import 'icones.dart';
 import 'api.dart';
 import 'estado.dart';
 import 'modelos.dart';
+import 'sheet_mesa.dart';
 
 /* ================================================================== *
  *  ABA MESAS — o mapa do salão
@@ -247,13 +248,9 @@ class _TelaMesasState extends State<TelaMesas> {
         ),
       );
 
-  void _abrirMesa(Mesa m) {
-    // A tela da comanda entra quando a documentação da API chegar.
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Mesa ${m.numero} — tela da comanda em construção'),
-      behavior: SnackBarBehavior.floating,
-      backgroundColor: T.dark2,
-    ));
+  Future<void> _abrirMesa(Mesa m) async {
+    final mudou = await mostrarMesa(context, m);
+    if (mudou == true && mounted) _atualizar();
   }
 }
 
@@ -274,8 +271,8 @@ class _CardMesa extends StatelessWidget {
       fundo = T.amareloSuave;
       rotulo = 'CONTA';
     } else if (mesa.reservada) {
-      cor = T.roxo;
-      fundo = T.roxoSuave;
+      cor = T.azul;
+      fundo = T.azulSuave;
       rotulo = 'RESERVADA';
     } else if (mesa.ocupada) {
       cor = T.redDark;
@@ -329,7 +326,7 @@ class _CardMesa extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(mesa.numero,
+            Text(mesa.titulo,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
