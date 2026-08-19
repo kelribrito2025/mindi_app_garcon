@@ -208,7 +208,7 @@ class Notificacoes {
       marcarAlertaFeito();
     } catch (_) {
       // se não deu para desenhar o aviso, a tela ainda vibra sozinha
-      alertarAvisoNovo();
+      alertarPedidoNovo();
     }
   }
 

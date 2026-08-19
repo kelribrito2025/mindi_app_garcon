@@ -115,7 +115,7 @@ class _TelaEditarPerfilState extends State<TelaEditarPerfil> {
                     valor: Sessao.empresa.isEmpty ? '—' : Sessao.empresa),
                 const SizedBox(height: 10),
                 Text(
-                  'Para mudar telefone ou restaurante, fale com quem administra o seu cadastro.',
+                  'Para mudar o e-mail ou o restaurante, fale com quem administra o seu cadastro.',
                   style: TextStyle(fontSize: 11.5, color: T.inkSoft, height: 1.4),
                 ),
               ],
