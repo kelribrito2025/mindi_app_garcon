@@ -1,0 +1,4 @@
+# Este arquivo diz ao app qual e o projeto dele no Shorebird.
+# O app_id abaixo precisa ser gerado rodando o workflow
+# "Shorebird - criar o app (rodar uma vez)" neste repositorio.
+app_id: PREENCHER_DEPOIS_DE_RODAR_O_WORKFLOW
