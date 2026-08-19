@@ -105,10 +105,11 @@ class _SheetCriarMesasState extends State<_SheetCriarMesas> {
                               fontSize: 19,
                               fontWeight: FontWeight.w800,
                               color: T.ink,
+                              height: 1.15,
                               letterSpacing: -.4)),
-                      const SizedBox(height: 2),
                       Text('Um espaço novo com as mesas dentro',
-                          style: TextStyle(fontSize: 13, color: T.inkSoft)),
+                          style: TextStyle(
+                          fontSize: 13, height: 1.25, color: T.inkSoft)),
                     ],
                   ),
                 ),

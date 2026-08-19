@@ -183,7 +183,12 @@ class _SheetMesaState extends State<_SheetMesa> {
           children: [
             _cabecalho(),
             const SizedBox(height: 16),
-            Flexible(child: _corpo()),
+            // Flexible só faz sentido quando o conteúdo pode passar da
+            // tela (a comanda). No formulário de abrir, ele esticaria à toa.
+            if (_mesa.livre || _carregando || _erro != null)
+              _corpo()
+            else
+              Flexible(child: _corpo()),
             const SizedBox(height: 14),
             _botoes(),
           ],
@@ -217,10 +222,11 @@ class _SheetMesaState extends State<_SheetMesa> {
                       fontSize: 19,
                       fontWeight: FontWeight.w800,
                       color: T.ink,
+                      height: 1.15,
                       letterSpacing: -.4)),
-              const SizedBox(height: 2),
               Text(_legenda(),
-                  style: TextStyle(fontSize: 13, color: T.inkSoft)),
+                  style: TextStyle(
+                          fontSize: 13, height: 1.25, color: T.inkSoft)),
             ],
           ),
         ),
@@ -277,6 +283,8 @@ class _SheetMesaState extends State<_SheetMesa> {
   /* ---------------- mesa livre ---------------- */
   Widget _formularioAbrir() {
     return Column(
+      // sem isso a coluna estica e o modal fica alto demais
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text('Quantas pessoas?',
