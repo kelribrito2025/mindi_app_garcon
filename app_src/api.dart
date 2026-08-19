@@ -190,10 +190,13 @@ class Api {
       throw ApiErro(0, 'Sem conexão com o servidor. Verifique a internet.');
     }
 
-    // token expirou: tenta renovar uma vez e repete a chamada
+    // 401 pode ser duas coisas bem diferentes: o token expirou, ou o
+    // próprio endpoint recusou (senha atual errada, por exemplo).
+    // Só faz sentido renovar o token no primeiro caso.
     if (r.statusCode == 401 &&
         comToken &&
         !jaTentouRenovar &&
+        _ehTokenExpirado(r) &&
         Sessao.refreshToken != null) {
       final renovou = await renovarToken();
       if (renovou) {
@@ -212,6 +215,24 @@ class Api {
     }
 
     return _tratar(r);
+  }
+
+  /// olha o código de erro do corpo para saber se o 401 é de sessão
+  static bool _ehTokenExpirado(http.Response r) {
+    try {
+      final corpo = jsonDecode(utf8.decode(r.bodyBytes));
+      if (corpo is Map) {
+        final codigo =
+            '${corpo['code'] ?? corpo['errorCode'] ?? corpo['error'] ?? ''}'
+                .toUpperCase();
+        if (codigo.isEmpty) return true;
+        return codigo == 'UNAUTHORIZED' ||
+            codigo == 'SESSION_REVOKED' ||
+            codigo == 'TOKEN_EXPIRED' ||
+            codigo == 'INVALID_TOKEN';
+      }
+    } catch (_) {}
+    return true;
   }
 
   static List<Map<String, dynamic>> _lista(dynamic r, String chave) {
@@ -376,8 +397,12 @@ class Api {
   /// PUT /api/waiter/me — muda o nome que aparece no app
   static Future<void> editarPerfil({required String nome}) async {
     final r = await _enviar('PUT', '$_raiz/me', corpo: {'name': nome});
-    final m = _mapa(r, 'waiter');
-    if (m.isNotEmpty) await Sessao.atualizarGarcom(m);
+    final m = _mapa(r);
+    // a resposta vem como {success: true, name: "..."} — só o nome
+    // interessa para a sessão
+    final novo = m['name'];
+    await Sessao.atualizarGarcom(
+        {'name': novo is String && novo.isNotEmpty ? novo : nome});
   }
 
   /// PUT /api/waiter/me/password — troca a senha
@@ -387,5 +412,22 @@ class Api {
     final m = _mapa(r);
     final msg = m['message'];
     return msg is String && msg.isNotEmpty ? msg : 'Senha alterada com sucesso.';
+  }
+
+  /* ----------------------------------------------------------------
+     ATENÇÃO: este endpoint ainda NÃO existe na documentação da API do
+     garçom — nem na Fase 1, nem na Fase 2. O caminho abaixo é a
+     proposta a ser confirmada com o backend.
+     ---------------------------------------------------------------- */
+
+  /// POST /api/waiter/spaces — cria um espaço já com N mesas dentro
+  static Future<Map<String, dynamic>> criarEspacoComMesas({
+    required String nome,
+    required int mesas,
+  }) async {
+    final r = await _enviar('POST', '$_raiz/spaces',
+        corpo: {'name': nome, 'tableCount': mesas},
+        chaveUnica: novaChaveUnica());
+    return _mapa(r, 'space');
   }
 }

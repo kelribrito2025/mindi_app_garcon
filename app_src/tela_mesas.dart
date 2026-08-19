@@ -6,6 +6,7 @@ import 'api.dart';
 import 'estado.dart';
 import 'modelos.dart';
 import 'sheet_mesa.dart';
+import 'sheet_criar_mesas.dart';
 
 /* ================================================================== *
  *  ABA MESAS — o mapa do salão
@@ -112,8 +113,10 @@ class _TelaMesasState extends State<TelaMesas> {
                   children: [
                     _resumo(),
                     const SizedBox(height: 18),
-                    if (_espacos.isNotEmpty) _filtros(),
-                    if (_espacos.isNotEmpty) const SizedBox(height: 14),
+                    // a fila sempre aparece: mesmo sem nenhum espaço
+                    // cadastrado, o botão "+" precisa estar ali
+                    _filtros(),
+                    const SizedBox(height: 14),
                     _conteudo(),
                   ],
                 ),
@@ -168,9 +171,11 @@ class _TelaMesasState extends State<TelaMesas> {
       height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: todos.length,
+        // +1 no fim da lista: o botão de criar mesas
+        itemCount: todos.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
+          if (i == todos.length) return _botaoCriar();
           final e = todos[i];
           final ativo = e.id == _espacoAberto;
           return AfundaAoTocar(
@@ -180,7 +185,7 @@ class _TelaMesasState extends State<TelaMesas> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: ativo ? T.redDark : T.card,
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: ativo ? T.redDark : T.borda),
               ),
               child: Text(e.nome,
@@ -193,6 +198,35 @@ class _TelaMesasState extends State<TelaMesas> {
         },
       ),
     );
+  }
+
+  /// botão "+" no fim da fila de espaços: abre o modal de criar mesas
+  Widget _botaoCriar() {
+    return AfundaAoTocar(
+      onTap: _criarMesas,
+      child: Container(
+        width: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: T.borda),
+        ),
+        child: Icon(Ico.maisItem, size: 18, color: T.redDark),
+      ),
+    );
+  }
+
+  Future<void> _criarMesas() async {
+    final criou = await mostrarCriarMesas(context);
+    if (criou == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Mesas criadas'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: T.dark2,
+      ));
+      await _atualizar();
+    }
   }
 
   Widget _conteudo() {
@@ -224,9 +258,19 @@ class _TelaMesasState extends State<TelaMesas> {
       ),
       itemBuilder: (_, i) => _CardMesa(
         mesa: _visiveis[i],
+        // a numeração recomeça em cada espaço, então em "Todos" pode
+        // existir mais de uma mesa 1. Aí o card mostra de onde ela é.
+        espaco: _espacoAberto == 0 ? _nomeDoEspaco(_visiveis[i].espacoId) : '',
         onTap: () => _abrirMesa(_visiveis[i]),
       ),
     );
+  }
+
+  String _nomeDoEspaco(int id) {
+    for (final e in _espacos) {
+      if (e.id == id) return e.nome;
+    }
+    return '';
   }
 
   Widget _vazio(IconData icone, String titulo, String texto) => Padding(
@@ -257,8 +301,22 @@ class _TelaMesasState extends State<TelaMesas> {
 /* ---------------- card de uma mesa ---------------- */
 class _CardMesa extends StatelessWidget {
   final Mesa mesa;
+
+  /// nome do espaço — só vem preenchido quando o filtro está em "Todos"
+  final String espaco;
   final VoidCallback onTap;
-  const _CardMesa({required this.mesa, required this.onTap});
+  const _CardMesa({
+    required this.mesa,
+    required this.onTap,
+    this.espaco = '',
+  });
+
+  /// linha de baixo do card: quem está na mesa ou há quanto tempo
+  String get _legenda {
+    if (mesa.identificacao.isNotEmpty) return mesa.identificacao;
+    if (mesa.livre) return '';
+    return mesa.tempoAberta;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +335,9 @@ class _CardMesa extends StatelessWidget {
     } else if (mesa.ocupada) {
       cor = T.redDark;
       fundo = T.redSuave;
-      rotulo = 'OCUPADA';
+      // mesa ocupada não precisa de rótulo: a borda vermelha, o valor e
+      // a quantidade de pessoas já dizem tudo
+      rotulo = '';
     } else {
       cor = T.green;
       fundo = T.greenSuave;
@@ -300,15 +360,23 @@ class _CardMesa extends StatelessWidget {
           children: [
             Row(
               children: [
+                // o quadradinho colorido agora carrega o número da mesa
                 Container(
-                  width: 30,
+                  constraints: const BoxConstraints(minWidth: 30),
                   height: 30,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: fundo,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Ico.mesa, size: 15, color: cor),
+                  child: Text(mesa.titulo,
+                      maxLines: 1,
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: cor,
+                          letterSpacing: -.3)),
                 ),
                 const Spacer(),
                 if (mesa.pessoas > 0)
@@ -326,26 +394,23 @@ class _CardMesa extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(mesa.titulo,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: T.ink,
-                    letterSpacing: -.4)),
-            if (mesa.identificacao.isNotEmpty)
-              Text(mesa.identificacao,
+            // quem está na mesa; se ninguém identificou, o tempo aberta
+            if (_legenda.isNotEmpty)
+              Text(_legenda,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11.5, color: T.inkSoft)),
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: T.inkMedio)),
             const Spacer(),
-            Text(rotulo,
-                style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .5,
-                    color: cor)),
+            if (rotulo.isNotEmpty)
+              Text(rotulo,
+                  style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .5,
+                      color: cor)),
             if (mesa.total > 0)
               Text(reais(mesa.total),
                   style: TextStyle(

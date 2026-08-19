@@ -122,7 +122,7 @@ class HeaderVermelho extends StatelessWidget {
   }
 }
 
-/* ---------- linha "Bem-vindo, Kelri" + nome do restaurante ---------- */
+/* ---------- linha "Bem-vindo, Kelri" no topo vermelho ---------- */
 class BarraBoasVindas extends StatelessWidget {
   /// tocar no avatar/nome leva para a aba Perfil
   final bool clicavel;
@@ -139,7 +139,6 @@ class BarraBoasVindas extends StatelessWidget {
 
   Widget _conteudo(BuildContext context) {
     final nome = Sessao.nome.isNotEmpty ? Sessao.nome : 'Garçom';
-    final loja = Sessao.empresa;
 
     return Row(
       children: [
@@ -188,29 +187,11 @@ class BarraBoasVindas extends StatelessWidget {
             ),
           ),
         ),
-        if (loja.isNotEmpty) ...[
-          const SizedBox(width: 8),
-          Container(
-            constraints: const BoxConstraints(maxWidth: 130),
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(.16),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Colors.white.withOpacity(.22)),
-            ),
-            child: Text(loja,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600)),
-          ),
-        ],
       ],
     );
   }
 }
+
 /* ---------- abre link fora do app (Maps, telefone, WhatsApp) ---------- */
 Future<void> abrirLink(BuildContext context, String? url) async {
   if (url == null || url.trim().isEmpty) {
