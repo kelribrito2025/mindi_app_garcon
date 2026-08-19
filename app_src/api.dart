@@ -182,6 +182,11 @@ class Api {
         case 'PUT':
           r = await http.put(url, headers: cab, body: body).timeout(_timeout);
           break;
+        case 'DELETE':
+          r = await http
+              .delete(url, headers: cab, body: body)
+              .timeout(_timeout);
+          break;
         default:
           throw ApiErro(0, 'Método não suportado.');
       }
@@ -430,4 +435,9 @@ class Api {
         chaveUnica: novaChaveUnica());
     return _mapa(r, 'space');
   }
+
+  /// DELETE /api/waiter/spaces/:id — apaga o espaço e as mesas dele
+  /// (endpoint ainda a confirmar com o backend)
+  static Future<void> apagarEspaco(int id) =>
+      _enviar('DELETE', '$_raiz/spaces/$id');
 }

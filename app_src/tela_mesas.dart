@@ -7,6 +7,7 @@ import 'estado.dart';
 import 'modelos.dart';
 import 'sheet_mesa.dart';
 import 'sheet_criar_mesas.dart';
+import 'sheet_apagar_espaco.dart';
 
 /* ================================================================== *
  *  ABA MESAS — o mapa do salão
@@ -227,6 +228,8 @@ class _TelaMesasState extends State<TelaMesas> {
           final ativo = e.id == _espacoAberto;
           return AfundaAoTocar(
             onTap: () => setState(() => _espacoAberto = e.id),
+            // segurar o dedo abre a opção de apagar o espaço
+            onLongPress: () => _apagarEspaco(e),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               alignment: Alignment.center,
@@ -262,6 +265,26 @@ class _TelaMesasState extends State<TelaMesas> {
         child: Icon(Ico.maisItem, size: 18, color: T.redDark),
       ),
     );
+  }
+
+  Future<void> _apagarEspaco(Espaco e) async {
+    final doEspaco = _mesas.where((m) => m.espacoId == e.id).toList();
+    final apagou = await mostrarApagarEspaco(
+      context,
+      espacoId: e.id,
+      nome: e.nome,
+      mesas: doEspaco.length,
+      ocupadas: doEspaco.where((m) => !m.livre).length,
+    );
+    if (apagou == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Espaço "${e.nome}" apagado'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: T.dark2,
+      ));
+      setState(() => _espacoAberto = 0); // deixa escolher o primeiro de novo
+      await _atualizar();
+    }
   }
 
   Future<void> _criarMesas() async {

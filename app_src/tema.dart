@@ -424,6 +424,9 @@ class AfundaAoTocar extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
 
+  /// segurar o dedo em cima (opcional)
+  final VoidCallback? onLongPress;
+
   /// quanto encolhe (1 = não encolhe). Cards usam menos que botões.
   final double escala;
 
@@ -431,6 +434,7 @@ class AfundaAoTocar extends StatefulWidget {
     super.key,
     required this.child,
     this.onTap,
+    this.onLongPress,
     this.escala = .96,
   });
 
@@ -450,6 +454,7 @@ class _AfundaAoTocarState extends State<AfundaAoTocar> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
       onTapDown: (_) => _muda(true),
       onTapUp: (_) => _muda(false),
       onTapCancel: () => _muda(false),
