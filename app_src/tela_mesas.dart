@@ -89,8 +89,6 @@ class _TelaMesasState extends State<TelaMesas> {
   List<Mesa> get _visiveis =>
       _mesas.where((m) => m.espacoId == _espacoAberto).toList();
 
-  int get _ocupadas => _visiveis.where((m) => !m.livre).length;
-
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
