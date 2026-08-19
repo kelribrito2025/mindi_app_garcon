@@ -126,7 +126,10 @@ class HeaderVermelho extends StatelessWidget {
 class BarraBoasVindas extends StatelessWidget {
   /// tocar no avatar/nome leva para a aba Perfil
   final bool clicavel;
-  const BarraBoasVindas({super.key, this.clicavel = true});
+
+  /// conteúdo opcional na ponta direita (ex.: "13/19 ocupadas")
+  final Widget? direita;
+  const BarraBoasVindas({super.key, this.clicavel = true, this.direita});
 
   @override
   Widget build(BuildContext context) {
@@ -187,6 +190,10 @@ class BarraBoasVindas extends StatelessWidget {
             ),
           ),
         ),
+        if (direita != null) ...[
+          const SizedBox(width: 10),
+          direita!,
+        ],
       ],
     );
   }

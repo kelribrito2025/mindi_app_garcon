@@ -25,7 +25,7 @@ class TelaMesas extends StatefulWidget {
 class _TelaMesasState extends State<TelaMesas> {
   List<Espaco> _espacos = [];
   List<Mesa> _mesas = [];
-  int _espacoAberto = 0; // 0 = todos
+  int _espacoAberto = 0; // 0 = ainda não carregou nenhum espaço
   bool _carregando = false;
   bool _primeiraVez = true;
   String? _erro;
@@ -64,6 +64,13 @@ class _TelaMesasState extends State<TelaMesas> {
         _espacos = (resultados[0]).map(Espaco.fromJson).toList();
         _mesas = (resultados[1]).map(Mesa.fromJson).toList();
         _erro = null;
+
+        // sempre tem um espaço aberto: se nenhum foi escolhido ainda,
+        // ou se o escolhido sumiu, abre o primeiro da lista
+        final existe = _espacos.any((e) => e.id == _espacoAberto);
+        if (!existe) {
+          _espacoAberto = _espacos.isEmpty ? 0 : _espacos.first.id;
+        }
       });
     } on ApiErro catch (e) {
       if (mounted) setState(() => _erro = e.mensagem);
@@ -79,11 +86,10 @@ class _TelaMesasState extends State<TelaMesas> {
     }
   }
 
-  List<Mesa> get _visiveis => _espacoAberto == 0
-      ? _mesas
-      : _mesas.where((m) => m.espacoId == _espacoAberto).toList();
+  List<Mesa> get _visiveis =>
+      _mesas.where((m) => m.espacoId == _espacoAberto).toList();
 
-  int get _ocupadas => _mesas.where((m) => !m.livre).length;
+  int get _ocupadas => _visiveis.where((m) => !m.livre).length;
 
   @override
   Widget build(BuildContext context) {
@@ -98,28 +104,29 @@ class _TelaMesasState extends State<TelaMesas> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             HeaderVermelho(
-              alturaExtra: 74,
+              alturaExtra: 18,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [BarraBoasVindas()],
+                children: [
+                  BarraBoasVindas(direita: _contador()),
+                  const SizedBox(height: 14),
+                  _barraOcupacao(),
+                  const SizedBox(height: 10),
+                  _legenda(),
+                ],
               ),
             ),
-            Transform.translate(
-              offset: const Offset(0, -46),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kSide),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _resumo(),
-                    const SizedBox(height: 18),
-                    // a fila sempre aparece: mesmo sem nenhum espaço
-                    // cadastrado, o botão "+" precisa estar ali
-                    _filtros(),
-                    const SizedBox(height: 14),
-                    _conteudo(),
-                  ],
-                ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(kSide, 16, kSide, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // a fila sempre aparece: mesmo sem nenhum espaço
+                  // cadastrado, o botão "+" precisa estar ali
+                  _filtros(),
+                  const SizedBox(height: 14),
+                  _conteudo(),
+                ],
               ),
             ),
           ],
@@ -128,55 +135,97 @@ class _TelaMesasState extends State<TelaMesas> {
     );
   }
 
-  Widget _resumo() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: T.card,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
-      ),
-      child: Row(
-        children: [
-          _numero('${_mesas.length}', 'mesas'),
-          _divisor(),
-          _numero('$_ocupadas', 'ocupadas', cor: T.redDark),
-          _divisor(),
-          _numero('${_mesas.length - _ocupadas}', 'livres', cor: T.green),
-        ],
-      ),
-    );
+  /* ---------------------------------------------------------------- *
+   *  RESUMO DENTRO DO TOPO VERMELHO
+   *  Reservada conta como ocupada: no salão a mesa não está livre.
+   * ---------------------------------------------------------------- */
+  int get _total => _visiveis.length;
+  int get _pedindoConta => _visiveis.where((m) => m.pedindoConta).length;
+  int get _livres => _visiveis.where((m) => m.livre).length;
+  int get _ocupadas => _total - _livres - _pedindoConta;
+
+  /// "13/19 ocupadas" — texto simples, sem moldura
+  Widget _contador() {
+    if (_total == 0) return const SizedBox.shrink();
+    return Text('${_total - _livres}/$_total ocupadas',
+        style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -.2));
   }
 
-  Widget _divisor() => Container(width: 1, height: 34, color: T.line);
-
-  Widget _numero(String valor, String label, {Color? cor}) => Expanded(
-        child: Column(
+  Widget _barraOcupacao() {
+    final trilho = Colors.white.withOpacity(.28);
+    if (_total == 0) {
+      return Container(
+        height: 9,
+        decoration: BoxDecoration(
+          color: trilho,
+          borderRadius: BorderRadius.circular(99),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(99),
+      child: SizedBox(
+        height: 9,
+        child: Row(
           children: [
-            Text(valor,
-                style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                    color: cor ?? T.ink,
-                    letterSpacing: -.6)),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(fontSize: 12, color: T.inkSoft)),
+            if (_ocupadas > 0)
+              Expanded(flex: _ocupadas, child: Container(color: Colors.white)),
+            if (_pedindoConta > 0)
+              Expanded(
+                  flex: _pedindoConta,
+                  child: Container(color: const Color(0xFFFCD34D))),
+            if (_livres > 0)
+              Expanded(flex: _livres, child: Container(color: trilho)),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _legenda() {
+    return Row(
+      children: [
+        _pontinho(Colors.white, '$_ocupadas ocupadas'),
+        const SizedBox(width: 16),
+        _pontinho(const Color(0xFFFCD34D), '$_pedindoConta conta'),
+        const SizedBox(width: 16),
+        _pontinho(Colors.white.withOpacity(.45), '$_livres livres'),
+      ],
+    );
+  }
+
+  Widget _pontinho(Color cor, String texto) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: cor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(texto,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withOpacity(.92))),
+        ],
       );
 
   Widget _filtros() {
-    final todos = [const Espaco(id: 0, nome: 'Todos'), ..._espacos];
     return SizedBox(
       height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         // +1 no fim da lista: o botão de criar mesas
-        itemCount: todos.length + 1,
+        itemCount: _espacos.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
-          if (i == todos.length) return _botaoCriar();
-          final e = todos[i];
+          if (i == _espacos.length) return _botaoCriar();
+          final e = _espacos[i];
           final ativo = e.id == _espacoAberto;
           return AfundaAoTocar(
             onTap: () => setState(() => _espacoAberto = e.id),
@@ -241,9 +290,14 @@ class _TelaMesasState extends State<TelaMesas> {
       return _vazio(Ico.semInternet, 'Sem conexão com o salão', _erro!);
     }
 
+    if (_espacos.isEmpty) {
+      return _vazio(Ico.mesas, 'Nenhum espaço cadastrado',
+          'Toque no + ao lado para criar o primeiro espaço com as mesas.');
+    }
+
     if (_visiveis.isEmpty) {
-      return _vazio(Ico.mesas, 'Nenhuma mesa por aqui',
-          'Cadastre as mesas no painel para elas aparecerem aqui.');
+      return _vazio(Ico.mesas, 'Nenhuma mesa neste espaço',
+          'Crie mesas aqui pelo botão + ou escolha outro espaço.');
     }
 
     return GridView.builder(
@@ -258,19 +312,9 @@ class _TelaMesasState extends State<TelaMesas> {
       ),
       itemBuilder: (_, i) => _CardMesa(
         mesa: _visiveis[i],
-        // a numeração recomeça em cada espaço, então em "Todos" pode
-        // existir mais de uma mesa 1. Aí o card mostra de onde ela é.
-        espaco: _espacoAberto == 0 ? _nomeDoEspaco(_visiveis[i].espacoId) : '',
         onTap: () => _abrirMesa(_visiveis[i]),
       ),
     );
-  }
-
-  String _nomeDoEspaco(int id) {
-    for (final e in _espacos) {
-      if (e.id == id) return e.nome;
-    }
-    return '';
   }
 
   Widget _vazio(IconData icone, String titulo, String texto) => Padding(
@@ -301,15 +345,8 @@ class _TelaMesasState extends State<TelaMesas> {
 /* ---------------- card de uma mesa ---------------- */
 class _CardMesa extends StatelessWidget {
   final Mesa mesa;
-
-  /// nome do espaço — só vem preenchido quando o filtro está em "Todos"
-  final String espaco;
   final VoidCallback onTap;
-  const _CardMesa({
-    required this.mesa,
-    required this.onTap,
-    this.espaco = '',
-  });
+  const _CardMesa({required this.mesa, required this.onTap});
 
   /// linha de baixo do card: quem está na mesa ou há quanto tempo
   String get _legenda {
