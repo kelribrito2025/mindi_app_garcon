@@ -4,6 +4,7 @@ import 'icones.dart';
 import 'api.dart';
 import 'sessao.dart';
 import 'estado.dart';
+import 'atualizacao.dart';
 import 'notificacoes.dart';
 import 'cardapio.dart';
 import 'tela_editar_perfil.dart';
@@ -269,9 +270,18 @@ class _TelaPerfilState extends State<TelaPerfil> {
                     ]),
 
                     const SizedBox(height: 14),
-                    Text('Versão 1.0.0',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11.5, color: T.inkSoft)),
+                    // mostra também qual correção pelo ar já entrou,
+                    // para saber se o celular pegou o último conserto
+                    ValueListenableBuilder<int?>(
+                      valueListenable: correcaoAtual,
+                      builder: (_, correcao, __) => Text(
+                          correcao == null
+                              ? 'Versão $kVersaoDoApp'
+                              : 'Versão $kVersaoDoApp · correção $correcao',
+                          textAlign: TextAlign.center,
+                          style:
+                              TextStyle(fontSize: 11.5, color: T.inkSoft)),
+                    ),
                   ],
                 ),
               ),

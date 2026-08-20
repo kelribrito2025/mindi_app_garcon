@@ -17,12 +17,31 @@ import 'icones.dart';
  *  um botão para fechar o app na hora.
  * ================================================================== */
 
+/// Versão que aparece no Perfil. Precisa bater com a linha `version:`
+/// do pubspec.yaml — o Shorebird só aplica correção feita para ela.
+const String kVersaoDoApp = '1.0.0+5';
+
 /// vira true quando existe correção baixada esperando o próximo arranque
 final atualizacaoPronta = ValueNotifier<bool>(false);
+
+/// número da correção que está rodando agora (null = nenhuma ainda).
+/// Serve para o garçom saber se o celular dele já pegou o conserto.
+final correcaoAtual = ValueNotifier<int?>(null);
+
+/// Lê qual correção está valendo neste momento.
+Future<void> lerCorrecaoAtual() async {
+  try {
+    final atual = await ShorebirdUpdater().readCurrentPatch();
+    correcaoAtual.value = atual?.number;
+  } catch (_) {
+    correcaoAtual.value = null;
+  }
+}
 
 /// Procura correção e baixa. Nunca lança erro: se não houver internet,
 /// se o app não tiver Shorebird (modo de teste), tudo segue igual.
 Future<void> procurarAtualizacao() async {
+  await lerCorrecaoAtual();
   try {
     final atualizador = ShorebirdUpdater();
     final situacao = await atualizador.checkForUpdate();
@@ -35,6 +54,8 @@ Future<void> procurarAtualizacao() async {
       case UpdateStatus.outdated:
         await atualizador.update();
         atualizacaoPronta.value = true;
+        return;
+      case UpdateStatus.upToDate:
         return;
       default:
         return; // já está na última versão, ou o app não usa Shorebird
