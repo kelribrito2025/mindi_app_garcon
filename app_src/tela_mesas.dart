@@ -124,16 +124,10 @@ class _TelaMesasState extends State<TelaMesas> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // topo igual ao das abas Ajustes e Perfil
             HeaderVermelho(
               alturaExtra: 18,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  BarraBoasVindas(direita: _contador()),
-                  const SizedBox(height: 12),
-                  _legenda(),
-                ],
-              ),
+              child: BarraBoasVindas(direita: _contador()),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(kSide, 16, kSide, 0),
