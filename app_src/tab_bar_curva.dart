@@ -68,13 +68,10 @@ class _TabBarCurvaState extends State<TabBarCurva>
         return AnimatedBuilder(
           animation: _c,
           builder: (context, _) {
-            final bruto = larguraAba * _posAtual() + larguraAba / 2;
-
-            // Com 4 abas o centro da primeira e da última cai muito perto
-            // da ponta da barra: a bolha ficava pendurada para fora e o
-            // recorte não batia com ela. Aqui os dois usam o MESMO limite.
-            const nw = kNotchR * 1.2;
-            final cx = bruto.clamp(kBarR + nw, w - kBarR - nw).toDouble();
+            // A bolha vai para o centro EXATO da aba. Quem se adapta
+            // perto da ponta é o recorte da barra, não a bolha — senão
+            // ela trava antes e fica desalinhada do texto.
+            final cx = larguraAba * _posAtual() + larguraAba / 2;
 
             return SizedBox(
               height: kBarH,
@@ -164,9 +161,16 @@ class _PintorBarra extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
     const r = kBarR, nr = kNotchR;
-    const nw = nr * 1.2;
-    // quem manda no limite é quem desenha a bolha; aqui só repete
-    final double c = cx.clamp(r + nw, w - r - nw).toDouble();
+
+    // o centro do recorte acompanha a bolha
+    final double c = cx.clamp(r, w - r).toDouble();
+
+    // perto da ponta o recorte precisa ser mais estreito, senão a curva
+    // invade o canto arredondado e a barra fica com um bico
+    var nw = nr * 1.2;
+    if (c - r < nw) nw = c - r;
+    if (w - r - c < nw) nw = w - r - c;
+    if (nw < 8) nw = 8;
 
     final path = Path()
       ..moveTo(r, 0)

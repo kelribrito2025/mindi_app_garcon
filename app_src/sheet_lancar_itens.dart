@@ -493,11 +493,17 @@ class _SheetLancarState extends State<_SheetLancar> {
       primary: false,
       padding: EdgeInsets.zero,
       itemCount: _carrinho.length,
-      separatorBuilder: (_, __) => Divider(color: T.line, height: 1),
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, i) {
         final item = _carrinho[i];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        // cada item num quadro claro, igual ao da comanda da mesa
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: T.campo,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: T.borda),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -577,6 +583,7 @@ class _SheetLancarState extends State<_SheetLancar> {
     );
   }
 
+  /// dentro do quadro cinza, o botão precisa ser branco para aparecer
   Widget _passo(IconData icone, VoidCallback onTap) => AfundaAoTocar(
         onTap: onTap,
         child: Container(
@@ -584,7 +591,7 @@ class _SheetLancarState extends State<_SheetLancar> {
           height: 30,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: T.campo,
+            color: T.card,
             borderRadius: BorderRadius.circular(9),
             border: Border.all(color: T.borda),
           ),

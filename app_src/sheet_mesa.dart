@@ -546,7 +546,7 @@ class _SheetMesaState extends State<_SheetMesa> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final i in c.itens.where((e) => !e.cancelado)) _linhaItem(i),
-          const SizedBox(height: 14),
+          const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -579,8 +579,16 @@ class _SheetMesaState extends State<_SheetMesa> {
   }
 
   Widget _linhaItem(ItemComanda i) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
+    // cada item num quadro claro: sem isso a lista vira um bloco só
+    // de texto e o garçom não separa um produto do outro
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: T.campo,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: T.borda),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -614,11 +622,11 @@ class _SheetMesaState extends State<_SheetMesa> {
                   Text(i.complementos.join(', '),
                       style: TextStyle(fontSize: 12, color: T.inkSoft)),
                 if (i.observacao.isNotEmpty)
-                  Text(i.observacao,
+                  Text('Obs.: ${i.observacao}',
                       style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
-                          color: T.inkSoft)),
+                          color: T.redDark)),
                 if (i.situacao.isNotEmpty)
                   Text(i.situacao,
                       style: TextStyle(

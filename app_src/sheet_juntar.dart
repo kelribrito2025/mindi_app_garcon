@@ -299,9 +299,19 @@ class _SheetSepararState extends State<_SheetSeparar> {
       _erro = null;
     });
     try {
-      for (final id in sair) {
-        await Api.separarMesa(id);
+      // O servidor só aceita desfazer o grupo pela mesa PRINCIPAL:
+      // chamar na secundária devolve TABLE_NOT_MERGED.
+      await Api.separarMesa(widget.principal.id);
+
+      // Saiu só uma parte? Junta de volta quem devia continuar.
+      final voltam = widget.secundarias
+          .map((m) => m.id)
+          .where((id) => !sair.contains(id))
+          .toList();
+      for (final id in voltam) {
+        await Api.juntarMesas(id, mesaAlvo: widget.principal.id);
       }
+
       if (mounted) Navigator.of(context).pop(true);
     } on ApiErro catch (e) {
       if (!mounted) return;

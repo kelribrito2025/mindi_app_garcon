@@ -102,38 +102,48 @@ class _SheetDetalhe extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // total da mesa e a comissão
-          Row(
-            children: [
-              Expanded(
-                child: _Caixa(
-                  rotulo: 'Total da mesa',
-                  valor: reais(c.total),
-                  cor: T.ink,
-                ),
+          // tudo que vem daqui para baixo rola junto: com muitos
+          // pagamentos a lista sozinha esticava e desalinhava as linhas
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // total da mesa e a comissão
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _Caixa(
+                          rotulo: 'Total da mesa',
+                          valor: reais(c.total),
+                          cor: T.ink,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _Caixa(
+                          rotulo: 'Sua comissão',
+                          valor: reais(c.comissao),
+                          cor: T.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 2, bottom: 8),
+                    child: Text('PAGAMENTOS',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .8,
+                            color: T.inkSoft)),
+                  ),
+                  _listaDePagamentos(),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _Caixa(
-                  rotulo: 'Sua comissão',
-                  valor: reais(c.comissao),
-                  cor: T.green,
-                ),
-              ),
-            ],
+            ),
           ),
-
-          const SizedBox(height: 18),
-          Padding(
-            padding: const EdgeInsets.only(left: 2, bottom: 8),
-            child: Text('PAGAMENTOS',
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .8,
-                    color: T.inkSoft)),
-          ),
-          Flexible(child: _listaDePagamentos()),
         ],
       ),
     );
@@ -155,10 +165,9 @@ class _SheetDetalhe extends StatelessWidget {
 
     final faltou = c.total - c.totalAvulso;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
           for (final p in c.pagamentos)
             _linha(
               icone: _icone(p.forma),
@@ -179,8 +188,7 @@ class _SheetDetalhe extends StatelessWidget {
               valor: faltou,
               ultima: true,
             ),
-        ],
-      ),
+      ],
     );
   }
 
@@ -210,6 +218,7 @@ class _SheetDetalhe extends StatelessWidget {
         border: ultima ? null : Border(bottom: BorderSide(color: T.line)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 36,
