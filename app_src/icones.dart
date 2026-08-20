@@ -85,4 +85,5 @@ class Ico {
   static const IconData separar = LucideIcons.unlink;
   static const IconData busca = LucideIcons.search;
   static const IconData impressora = LucideIcons.printer;
+  static const IconData sino = LucideIcons.bell;
 }

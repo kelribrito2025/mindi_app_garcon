@@ -147,6 +147,21 @@ class _SheetMesaState extends State<_SheetMesa> {
     }
   }
 
+  /// Botão "Solicitar conta": escolhe entre avisar o balcão ou fechar
+  Future<void> _abrirOpcoesDaConta() async {
+    final escolha = await mostrarOpcoesDaConta(
+      context,
+      mesa: _mesa.titulo,
+      contaJaPedida: _mesa.pedindoConta,
+    );
+    if (escolha == null || !mounted) return;
+    if (escolha == 'solicitar') {
+      await _pedirConta();
+    } else if (escolha == 'fechar') {
+      await _fechar();
+    }
+  }
+
   Future<void> _fechar() async {
     final total = _comanda?.falta ?? 0;
     final resultado = await mostrarFechamento(context, total: total);
@@ -565,30 +580,16 @@ class _SheetMesaState extends State<_SheetMesa> {
           onTap: _lancarItens,
         ),
         if (temItens) ...[
-        const SizedBox(height: 9),
-        Row(
-          children: [
-            Expanded(
-              child: _BotaoGrande(
-                texto: _mesa.pedindoConta ? 'Conta pedida' : 'Pedir conta',
-                icone: Ico.comanda,
-                secundario: true,
-                carregando: false,
-                onTap: _mesa.pedindoConta || _ocupado ? null : _pedirConta,
-              ),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: _BotaoGrande(
-                texto: 'Fechar mesa',
-                icone: Ico.conta,
-                secundario: true,
-                carregando: _ocupado,
-                onTap: _fechar,
-              ),
-            ),
-          ],
-        ),
+          const SizedBox(height: 9),
+          // um botão só: dentro dele o garçom escolhe entre avisar o
+          // balcão ou fechar a mesa na hora
+          _BotaoGrande(
+            texto: 'Solicitar conta',
+            icone: Ico.conta,
+            secundario: true,
+            carregando: _ocupado,
+            onTap: _ocupado ? null : _abrirOpcoesDaConta,
+          ),
         ],
         if (_mesa.principalDoGrupo) ...[
           const SizedBox(height: 9),

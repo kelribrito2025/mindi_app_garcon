@@ -309,3 +309,170 @@ class _SheetFecharState extends State<_SheetFechar> {
     );
   }
 }
+
+/* ================================================================== *
+ *  O QUE FAZER COM A CONTA
+ *  Abre depois do botão "Solicitar conta" e oferece duas saídas:
+ *  avisar o balcão, ou fechar a mesa na hora.
+ *  Devolve 'solicitar', 'fechar' ou null.
+ * ================================================================== */
+Future<String?> mostrarOpcoesDaConta(
+  BuildContext context, {
+  required String mesa,
+  required bool contaJaPedida,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(.55),
+    builder: (ctx) => Container(
+      padding: EdgeInsets.fromLTRB(
+          18, 20, 18, 18 + MediaQuery.of(ctx).padding.bottom),
+      decoration: BoxDecoration(
+        color: T.card,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: T.redSuave,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(Ico.conta, size: 23, color: T.redDark),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Fechar mesa',
+                        style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            color: T.ink,
+                            height: 1.15,
+                            letterSpacing: -.4)),
+                    Text('Mesa $mesa',
+                        style: TextStyle(
+                            fontSize: 13, height: 1.25, color: T.inkSoft)),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () => Navigator.of(ctx).pop(),
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: T.campo,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Ico.fechar, size: 17, color: T.inkMedio),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _OpcaoDaConta(
+            icone: Ico.sino,
+            cor: T.amarelo,
+            fundo: T.amareloSuave,
+            titulo: contaJaPedida ? 'Conta já solicitada' : 'Solicitar conta',
+            texto: contaJaPedida
+                ? 'O balcão já foi avisado desta mesa'
+                : 'Notifica o balcão para fechar a mesa',
+            ativo: !contaJaPedida,
+            onTap: () => Navigator.of(ctx).pop('solicitar'),
+          ),
+          const SizedBox(height: 10),
+          _OpcaoDaConta(
+            icone: Ico.impressora,
+            cor: T.redDark,
+            fundo: T.redSuave,
+            titulo: 'Confirmar e fechar mesa',
+            texto: 'Fecha a mesa e imprime o recibo',
+            ativo: true,
+            onTap: () => Navigator.of(ctx).pop('fechar'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _OpcaoDaConta extends StatelessWidget {
+  final IconData icone;
+  final Color cor, fundo;
+  final String titulo, texto;
+  final bool ativo;
+  final VoidCallback onTap;
+  const _OpcaoDaConta({
+    required this.icone,
+    required this.cor,
+    required this.fundo,
+    required this.titulo,
+    required this.texto,
+    required this.ativo,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AfundaAoTocar(
+      onTap: ativo ? onTap : () {},
+      child: Opacity(
+        opacity: ativo ? 1 : .5,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: T.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: T.borda),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: fundo,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icone, size: 21, color: cor),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo,
+                        style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: T.ink,
+                            height: 1.2)),
+                    const SizedBox(height: 2),
+                    Text(texto,
+                        style: TextStyle(
+                            fontSize: 12.5, height: 1.25, color: T.inkSoft)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

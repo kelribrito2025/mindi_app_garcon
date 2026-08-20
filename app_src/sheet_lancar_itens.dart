@@ -300,7 +300,7 @@ class _SheetLancarState extends State<_SheetLancar> {
                         Flexible(
                           child: Text(
                               _identificacao.isEmpty
-                                  ? 'Adicionar identificação'
+                                  ? 'Inserir identificação'
                                   : _identificacao,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -528,7 +528,7 @@ class _SheetLancarState extends State<_SheetLancar> {
                 ],
               ),
               const SizedBox(height: 8),
-              // linha de baixo: - quantidade +
+              // linha de baixo: - quantidade +  ... e a lixeira na ponta
               Row(
                 children: [
                   _passo(Ico.menosItem, () => _mudarQuantidade(item, -1)),
@@ -542,6 +542,21 @@ class _SheetLancarState extends State<_SheetLancar> {
                             color: T.ink)),
                   ),
                   _passo(Ico.maisItem, () => _mudarQuantidade(item, 1)),
+                  const Spacer(),
+                  // tira o item inteiro do carrinho de uma vez
+                  AfundaAoTocar(
+                    onTap: () => setState(() => _carrinho.remove(item)),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: T.redSuave,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Ico.lixeira, size: 16, color: T.redDark),
+                    ),
+                  ),
                 ],
               ),
             ],
