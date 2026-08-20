@@ -490,8 +490,8 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
 
   bool _ligada = false;
   bool _automatica = false;
-  String _nome = '';
-  String _ultimoErro = '';
+  int _quantas = 0;
+  String _papel = '';
   String _recado = '';
 
   @override
@@ -513,10 +513,10 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
       final r = await Api.impressora();
       if (!mounted) return;
       setState(() {
-        _ligada = r['online'] == true;
-        _automatica = r['autoPrint'] == true;
-        _nome = (r['name'] ?? '').toString();
-        _ultimoErro = (r['lastError'] ?? '').toString();
+        _ligada = r['connected'] == true;
+        _automatica = r['autoPrintEnabled'] == true;
+        _quantas = r['connections'] is num ? (r['connections'] as num).toInt() : 0;
+        _papel = (r['paperWidth'] ?? '').toString();
         _semRecurso = false;
         _carregando = false;
       });
@@ -669,8 +669,10 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
   String _titulo() {
     if (_carregando) return 'Conferindo...';
     if (_semRecurso) return 'Impressora';
-    if (!_ligada) return 'Impressora sem resposta';
-    return _nome.isEmpty ? 'Impressora funcionando' : _nome;
+    if (!_ligada) return 'Impressora desconectada';
+    return _quantas > 1
+        ? '$_quantas impressoras conectadas'
+        : 'Impressora conectada';
   }
 
   String _detalhe() {
@@ -678,12 +680,14 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
       return 'Não dá para conferir daqui. Use o teste para ver se sai papel.';
     }
     if (!_ligada) {
-      return _ultimoErro.isNotEmpty
-          ? _ultimoErro
-          : 'Veja se ela está ligada, com papel e na mesma rede.';
+      return 'Veja se o computador do balcão está ligado com o Mindi '
+          'Printer aberto.';
     }
-    return _automatica
-        ? 'Impressão automática ligada'
-        : 'Impressão automática desligada';
+    return [
+      _automatica
+          ? 'Impressão automática ligada'
+          : 'Impressão automática desligada',
+      if (_papel.isNotEmpty) 'papel $_papel',
+    ].join(' · ');
   }
 }

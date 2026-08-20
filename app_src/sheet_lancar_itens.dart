@@ -4,6 +4,7 @@ import 'icones.dart';
 import 'api.dart';
 import 'modelos.dart';
 import 'cardapio.dart';
+import 'sessao.dart';
 import 'sheets_pedido.dart';
 
 /* ================================================================== *
@@ -150,12 +151,22 @@ class _SheetLancarState extends State<_SheetLancar> {
 
     setState(() => _enviando = true);
     try {
-      await Api.adicionarItens(
+      final r = await Api.adicionarItens(
         widget.comandaId,
         _carrinho.map((i) => i.paraApi()).toList(),
       );
 
-      if (escolha == 'imprimir') {
+      // o servidor avisa se já imprimiu sozinho (impressão automática)
+      final saiuSozinho = r['autoPrinted'] == true;
+
+      if (saiuSozinho) {
+        if (mounted) _avisar('Itens enviados e impressos.');
+      } else if (Sessao.imprimeSozinho) {
+        // o restaurante usa automático, mas desta vez não saiu
+        if (mounted) {
+          _avisar('Itens enviados, mas a impressora não respondeu.');
+        }
+      } else if (escolha == 'imprimir') {
         try {
           await Api.imprimirComanda(widget.comandaId);
         } on ApiErro catch (e) {

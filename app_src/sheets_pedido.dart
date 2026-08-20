@@ -4,6 +4,7 @@ import 'icones.dart';
 import 'api.dart';
 import 'modelos.dart';
 import 'cardapio.dart';
+import 'sessao.dart';
 
 /* ================================================================== *
  *  1. MODAL DO ITEM — foto, complementos, observação e quantidade
@@ -829,51 +830,77 @@ Future<String?> mostrarEnviarPedido(BuildContext context,
             ],
           ),
           const SizedBox(height: 20),
-          AfundaAoTocar(
-            onTap: () => Navigator.of(ctx).pop('imprimir'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                gradient: kGradRed,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Ico.impressora, size: 18, color: Colors.white),
-                  SizedBox(width: 9),
-                  Text('Enviar e imprimir',
-                      style: TextStyle(
-                          fontSize: 15.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white)),
-                ],
+
+          // Quando o restaurante imprime sozinho, não faz sentido
+          // oferecer "enviar e imprimir": sairia papel duas vezes.
+          if (Sessao.imprimeSozinho) ...[
+            AfundaAoTocar(
+              onTap: () => Navigator.of(ctx).pop('enviar'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: kGradRed,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text('Enviar pedido',
+                    style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          AfundaAoTocar(
-            onTap: () => Navigator.of(ctx).pop('enviar'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: T.campo,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: T.borda),
+            const SizedBox(height: 12),
+            Text('A comanda sai na impressora sozinha.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: T.inkSoft)),
+          ] else ...[
+            AfundaAoTocar(
+              onTap: () => Navigator.of(ctx).pop('imprimir'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: kGradRed,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Ico.impressora, size: 18, color: Colors.white),
+                    SizedBox(width: 9),
+                    Text('Enviar e imprimir',
+                        style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                  ],
+                ),
               ),
-              child: Text('Apenas enviar',
-                  style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: T.inkMedio)),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text('"Apenas enviar" manda para a mesa sem passar pela impressora.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: T.inkSoft)),
+            const SizedBox(height: 10),
+            AfundaAoTocar(
+              onTap: () => Navigator.of(ctx).pop('enviar'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: T.campo,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: T.borda),
+                ),
+                child: Text('Apenas enviar',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: T.inkMedio)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('"Apenas enviar" manda para a mesa sem passar pela impressora.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: T.inkSoft)),
+          ],
         ],
       ),
     ),

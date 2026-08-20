@@ -411,6 +411,16 @@ Future<String?> mostrarOpcoesDaConta(
           const SizedBox(height: 10),
           _OpcaoDaConta(
             icone: Ico.impressora,
+            cor: T.inkMedio,
+            fundo: T.campo2,
+            titulo: 'Reimprimir comanda',
+            texto: 'Sai tudo de novo, se o papel rasgou',
+            ativo: true,
+            onTap: () => Navigator.of(ctx).pop('reimprimir'),
+          ),
+          const SizedBox(height: 10),
+          _OpcaoDaConta(
+            icone: Ico.impressora,
             cor: T.redDark,
             fundo: T.redSuave,
             titulo: 'Confirmar e fechar mesa',

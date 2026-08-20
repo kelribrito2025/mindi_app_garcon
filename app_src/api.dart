@@ -513,12 +513,14 @@ class Api {
    * ================================================================ */
 
   /// POST /api/waiter/tabs/:id/add-items
-  static Future<void> adicionarItens(
+  /// Devolve a resposta do servidor. O campo `autoPrinted` diz se a
+  /// comanda já saiu na impressora sozinha.
+  static Future<Map<String, dynamic>> adicionarItens(
     int comandaId,
     List<Map<String, dynamic>> itens,
-  ) =>
-      _enviar('POST', '$_raiz/tabs/$comandaId/add-items',
-          corpo: {'items': itens}, chaveUnica: novaChaveUnica());
+  ) async =>
+      _mapa(await _enviar('POST', '$_raiz/tabs/$comandaId/add-items',
+          corpo: {'items': itens}, chaveUnica: novaChaveUnica()));
 
   /* ----------------------------------------------------------------
      ATENÇÃO: estes dois endpoints ainda NÃO estão na documentação da
@@ -592,9 +594,13 @@ class Api {
       _enviar('PUT', '$_raiz/tables/$id/label',
           corpo: {'label': identificacao});
 
-  /// POST /api/waiter/tabs/:id/print — manda a comanda para a impressora
-  static Future<void> imprimirComanda(int comandaId) =>
-      _enviar('POST', '$_raiz/tabs/$comandaId/print');
+  /// POST /api/waiter/tabs/:id/print
+  /// Sem parâmetro sai só o que foi lançado agora.
+  /// Com [tudo] sai a comanda inteira (papel rasgou, cozinha perdeu).
+  static Future<void> imprimirComanda(int comandaId, {bool tudo = false}) =>
+      _enviar('POST', '$_raiz/tabs/$comandaId/print',
+          corpo: tudo ? {'all': true} : null,
+          chaveUnica: novaChaveUnica());
 
   /// GET /api/waiter/tables/:id/history — pedidos já feitos nesta mesa
   static Future<List<Map<String, dynamic>>> historicoDaMesa(int id) async =>

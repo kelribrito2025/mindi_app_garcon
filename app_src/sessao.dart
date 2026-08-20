@@ -39,6 +39,20 @@ class Sessao {
   static bool get aceitaCartao => loja['acceptsCard'] == true;
   static bool get aceitaPix => loja['acceptsPix'] == true;
 
+  /* ---------------- impressora ---------------- */
+
+  /// bloco "printer" que vem no /me
+  static Map<String, dynamic> get impressora {
+    final p = garcom['printer'];
+    return p is Map ? p.cast<String, dynamic>() : const {};
+  }
+
+  /// o restaurante imprime sozinho ao lançar os itens?
+  static bool get imprimeSozinho => impressora['autoPrintEnabled'] == true;
+
+  /// a impressora está conectada agora?
+  static bool get impressoraLigada => impressora['connected'] == true;
+
   /// o garçom é o dono do estabelecimento?
   static bool get dono => garcom['role']?.toString() == 'owner';
 

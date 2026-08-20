@@ -163,8 +163,34 @@ class _SheetMesaState extends State<_SheetMesa> {
       await _fecharParcial();
     } else if (escolha == 'avulso') {
       await _pagamentoAvulso();
+    } else if (escolha == 'reimprimir') {
+      await _reimprimir();
     } else if (escolha == 'fechar') {
       await _fechar();
+    }
+  }
+
+  /// papel rasgou ou a cozinha perdeu: sai a comanda inteira de novo
+  Future<void> _reimprimir() async {
+    final id = _comanda?.id ?? _mesa.comandaId;
+    if (id == null) {
+      _avisar('Essa mesa não tem comanda aberta.');
+      return;
+    }
+    setState(() => _ocupado = true);
+    try {
+      await Api.imprimirComanda(id, tudo: true);
+      if (mounted) _avisar('Comanda enviada para a impressora.');
+    } on ApiErro catch (e) {
+      if (mounted) {
+        _avisar(e.codigo == 'PRINTER_OFFLINE'
+            ? 'A impressora não respondeu. Veja se está ligada e com papel.'
+            : e.mensagem);
+      }
+    } catch (_) {
+      if (mounted) _avisar('Não deu para imprimir agora.');
+    } finally {
+      if (mounted) setState(() => _ocupado = false);
     }
   }
 
