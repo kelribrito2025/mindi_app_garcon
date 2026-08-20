@@ -78,6 +78,8 @@ class Ico {
   static const IconData cartao = LucideIcons.creditCard;
   static const IconData editar = LucideIcons.pencil;
   static const IconData voltarSeta = LucideIcons.rotateCcw;
+  // balãozinho da observação do item
+  static const IconData observacao = LucideIcons.messageSquare;
   // juntar / separar mesas
   static const IconData juntar = LucideIcons.link;
   static const IconData separar = LucideIcons.unlink;

@@ -302,9 +302,7 @@ class _SheetMesaState extends State<_SheetMesa> {
 
   String _legenda() {
     final m = _mesa;
-    if (m.livre) {
-      return m.capacidade > 0 ? 'Livre · até ${m.capacidade} pessoas' : 'Livre';
-    }
+    if (m.livre) return 'Livre';
     final partes = <String>[];
     if (m.principalDoGrupo) {
       partes.add(m.mesasJuntadas.length == 1

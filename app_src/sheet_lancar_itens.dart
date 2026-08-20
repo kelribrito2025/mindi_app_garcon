@@ -92,9 +92,16 @@ class _SheetLancarState extends State<_SheetLancar> {
     final grupos =
         p.temComplementos ? Cardapio.gruposDe(p.id) : <GrupoComplemento>[];
 
-    // modal do item: foto, complementos, observação e quantidade
-    final novo = await mostrarItem(context, produto: p, grupos: grupos);
-    if (novo == null || !mounted) return; // cancelou
+    ItemNovo novo;
+    if (grupos.isEmpty) {
+      // produto sem opções para escolher: entra direto, sem abrir modal
+      novo = ItemNovo(produto: p);
+    } else {
+      // modal do item: foto, complementos, observação e quantidade
+      final escolhido = await mostrarItem(context, produto: p, grupos: grupos);
+      if (escolhido == null || !mounted) return; // cancelou
+      novo = escolhido;
+    }
 
     setState(() {
       // linha igual (mesmo produto, mesmos complementos, mesma observação)
@@ -230,6 +237,7 @@ class _SheetLancarState extends State<_SheetLancar> {
       children: [
         Row(
           children: [
+            // mesmo quadradinho com ícone de mesa do modal da mesa
             Container(
               width: 46,
               height: 46,
@@ -238,24 +246,43 @@ class _SheetLancarState extends State<_SheetLancar> {
                 color: T.redSuave,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(m.titulo,
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: T.redDark)),
+              child: Icon(Ico.mesa, size: 22, color: T.redDark),
             ),
             const SizedBox(width: 13),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(m.nome.isNotEmpty ? m.nome : 'Mesa ${m.titulo}',
-                      style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: T.ink,
-                          height: 1.15,
-                          letterSpacing: -.4)),
+                  // "Mesa 3 · R$ 0,00" na mesma linha
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                            m.nome.isNotEmpty ? m.nome : 'Mesa ${m.titulo}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: T.ink,
+                                height: 1.15,
+                                letterSpacing: -.4)),
+                      ),
+                      Text(' · ',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              height: 1.15,
+                              color: T.fraco)),
+                      Text(reais(widget.totalAtual),
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: T.ink,
+                              height: 1.15,
+                              letterSpacing: -.4)),
+                    ],
+                  ),
                   // a identificação ocupa o lugar do antigo "já na mesa"
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -289,12 +316,6 @@ class _SheetLancarState extends State<_SheetLancar> {
                 ],
               ),
             ),
-            Text(reais(widget.totalAtual),
-                style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: T.ink,
-                    letterSpacing: -.4)),
             const SizedBox(width: 10),
             GestureDetector(
               onTap: () => Navigator.of(context).pop(false),
@@ -383,11 +404,9 @@ class _SheetLancarState extends State<_SheetLancar> {
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: T.ink)),
-                      Text(
-                          [
-                            Cardapio.nomeDaCategoria(p.categoriaId),
-                            if (p.temComplementos) 'tem opções',
-                          ].where((t) => t.isNotEmpty).join(' · '),
+                      Text(Cardapio.nomeDaCategoria(p.categoriaId),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 12, color: T.inkSoft)),
                     ],
                   ),

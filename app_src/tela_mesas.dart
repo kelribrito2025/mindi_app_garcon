@@ -515,7 +515,9 @@ class _CardMesa extends StatelessWidget {
   /// linha de baixo do card: quem está na mesa ou há quanto tempo
   String get _legenda {
     if (mesa.identificacao.isNotEmpty) return mesa.identificacao;
-    if (mesa.livre) return '';
+    // mesa aberta sem nenhum item ainda não mostra tempo: ela conta
+    // como livre até o primeiro item ser lançado
+    if (mesa.pareceLivre) return '';
     return mesa.tempoAberta;
   }
 
@@ -680,7 +682,7 @@ class _LinhaMesa extends StatelessWidget {
       if (mesa.secundariaDoGrupo) 'junta com outra mesa',
       if (mesa.identificacao.isNotEmpty) mesa.identificacao,
       if (mesa.pessoas > 0) '${mesa.pessoas} pessoas',
-      if (!mesa.livre && mesa.tempoAberta.isNotEmpty) mesa.tempoAberta,
+      if (!mesa.pareceLivre && mesa.tempoAberta.isNotEmpty) mesa.tempoAberta,
     ].join(' · ');
 
     return AfundaAoTocar(
