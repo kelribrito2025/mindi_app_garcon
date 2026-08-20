@@ -486,16 +486,24 @@ class _TelaMesasState extends State<TelaMesas> {
             ),
           ),
           childWhenDragging: Opacity(opacity: .3, child: cartao),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 130),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: destacado ? T.redDark : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: cartao,
+          // o destaque é desenhado POR CIMA do card, não em volta:
+          // uma moldura de verdade encolheria o card em 4px sempre,
+          // mesmo transparente
+          child: Stack(
+            children: [
+              cartao,
+              if (destacado)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: T.redDark, width: 2),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
