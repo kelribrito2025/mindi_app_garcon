@@ -58,10 +58,15 @@ class Cardapio {
   static List<Produto> buscar(String termo) {
     final t = _limpo(termo);
     if (t.isEmpty) return const [];
+
+    // Só entra na lista o produto em que ALGUMA palavra do nome COMEÇA
+    // com o que foi digitado. Nada de casar no meio da palavra: digitar
+    // "t" não pode trazer "Batata".
     final achados = produtos
-        .where((p) => p.disponivel && _limpo(p.nome).contains(t))
+        .where((p) => p.disponivel && _comecaCom(p.nome, t))
         .toList();
-    // quem começa com o que foi digitado aparece primeiro
+
+    // quem começa na primeira palavra aparece primeiro
     achados.sort((a, b) {
       final ca = _limpo(a.nome).startsWith(t) ? 0 : 1;
       final cb = _limpo(b.nome).startsWith(t) ? 0 : 1;
@@ -69,6 +74,25 @@ class Cardapio {
       return a.nome.compareTo(b.nome);
     });
     return achados.take(30).toList();
+  }
+
+  /// true se o trecho digitado começa uma palavra do nome.
+  /// "bat" acha "Batata"; "t" NÃO acha "Batata"; "batata f" acha
+  /// "Batata Frita".
+  static bool _comecaCom(String nome, String t) {
+    final n = _limpo(nome);
+    var de = 0;
+    while (true) {
+      final i = n.indexOf(t, de);
+      if (i < 0) return false;
+      if (i == 0 || !_letra(n[i - 1])) return true;
+      de = i + 1;
+    }
+  }
+
+  static bool _letra(String c) {
+    final u = c.codeUnitAt(0);
+    return (u >= 97 && u <= 122) || (u >= 48 && u <= 57);
   }
 
   static String _limpo(String s) {
@@ -92,11 +116,20 @@ class ItemNovo {
   /// complementos escolhidos: opção -> quantidade
   final Map<OpcaoComplemento, int> extras;
 
+  /// observação para a cozinha: "sem cebola", "ao ponto"...
+  String observacao;
+
   ItemNovo({
     required this.produto,
     this.quantidade = 1,
+    this.observacao = '',
     Map<OpcaoComplemento, int>? extras,
   }) : extras = extras ?? {};
+
+  /// duas linhas do carrinho só se juntam se forem idênticas:
+  /// mesmo produto, mesmos complementos e mesma observação
+  String get assinatura =>
+      '${produto.id}|${nomesDosExtras.join(",")}|${observacao.trim()}';
 
   double get precoDosExtras {
     var soma = 0.0;
@@ -129,5 +162,6 @@ class ItemNovo {
                   'quantity': e.value,
                 })
             .toList(),
+        if (observacao.trim().isNotEmpty) 'notes': observacao.trim(),
       };
 }

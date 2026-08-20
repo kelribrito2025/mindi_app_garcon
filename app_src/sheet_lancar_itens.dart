@@ -4,7 +4,6 @@ import 'icones.dart';
 import 'api.dart';
 import 'modelos.dart';
 import 'cardapio.dart';
-import 'sessao.dart';
 import 'sheets_pedido.dart';
 
 /* ================================================================== *
@@ -87,36 +86,25 @@ class _SheetLancarState extends State<_SheetLancar> {
     ));
   }
 
-  /* ---------------- contas ---------------- */
-
-  double get _subtotal =>
-      _carrinho.fold(0.0, (soma, i) => soma + i.total);
-
-  double get _taxa => _subtotal * (Sessao.taxaServico / 100);
-
-  double get _total => _subtotal + _taxa;
-
   /* ---------------- montar a lista ---------------- */
 
   Future<void> _adicionar(Produto p) async {
-    final grupos = Cardapio.gruposDe(p.id);
+    final grupos =
+        p.temComplementos ? Cardapio.gruposDe(p.id) : <GrupoComplemento>[];
 
-    Map<OpcaoComplemento, int>? extras;
-    if (p.temComplementos && grupos.isNotEmpty) {
-      extras = await mostrarComplementos(context, produto: p, grupos: grupos);
-      if (extras == null) return; // cancelou
-    }
+    // modal do item: foto, complementos, observação e quantidade
+    final novo = await mostrarItem(context, produto: p, grupos: grupos);
+    if (novo == null || !mounted) return; // cancelou
 
     setState(() {
-      // item igual (mesmo produto, mesmos complementos) só soma quantidade
-      final igual = _carrinho.where((i) =>
-          i.produto.id == p.id &&
-          i.nomesDosExtras.join('|') ==
-              ItemNovo(produto: p, extras: extras).nomesDosExtras.join('|'));
+      // linha igual (mesmo produto, mesmos complementos, mesma observação)
+      // só soma quantidade; observação diferente vira outra linha
+      final igual =
+          _carrinho.where((i) => i.assinatura == novo.assinatura);
       if (igual.isNotEmpty) {
-        igual.first.quantidade++;
+        igual.first.quantidade += novo.quantidade;
       } else {
-        _carrinho.add(ItemNovo(produto: p, extras: extras));
+        _carrinho.add(novo);
       }
       _busca.clear();
     });
@@ -226,8 +214,6 @@ class _SheetLancarState extends State<_SheetLancar> {
                   : _listaDoCarrinho(),
             ),
             if (achados.isEmpty) ...[
-              const SizedBox(height: 12),
-              _totais(),
               const SizedBox(height: 14),
               _botoes(),
             ],
@@ -270,9 +256,36 @@ class _SheetLancarState extends State<_SheetLancar> {
                           color: T.ink,
                           height: 1.15,
                           letterSpacing: -.4)),
-                  Text('já na mesa',
-                      style: TextStyle(
-                          fontSize: 12.5, height: 1.25, color: T.inkSoft)),
+                  // a identificação ocupa o lugar do antigo "já na mesa"
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _identificar,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                            _identificacao.isEmpty
+                                ? Ico.maisItem
+                                : Ico.editar,
+                            size: 13,
+                            color: T.redDark),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                              _identificacao.isEmpty
+                                  ? 'Adicionar identificação'
+                                  : _identificacao,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  fontSize: 12.5,
+                                  height: 1.25,
+                                  fontWeight: FontWeight.w700,
+                                  color: T.redDark)),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -297,30 +310,6 @@ class _SheetLancarState extends State<_SheetLancar> {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 10),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _identificar,
-          child: Row(
-            children: [
-              Icon(_identificacao.isEmpty ? Ico.maisItem : Ico.editar,
-                  size: 14, color: T.redDark),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                    _identificacao.isEmpty
-                        ? 'Adicionar identificação'
-                        : _identificacao,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: T.redDark)),
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -450,6 +439,8 @@ class _SheetLancarState extends State<_SheetLancar> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 26),
         child: Column(
+          // centraliza o aviso no espaço livre do modal
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Ico.cardapio, size: 32, color: T.fraco),
             const SizedBox(height: 10),
@@ -476,44 +467,63 @@ class _SheetLancarState extends State<_SheetLancar> {
       itemBuilder: (_, i) {
         final item = _carrinho[i];
         return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 9),
-          child: Row(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item.produto.nome,
+              // linha de cima: nome (e complementos) + valor da linha
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.produto.nome,
+                            style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: T.ink)),
+                        if (item.nomesDosExtras.isNotEmpty)
+                          Text(item.nomesDosExtras.join(', '),
+                              style:
+                                  TextStyle(fontSize: 12, color: T.inkSoft)),
+                        if (item.observacao.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text('Obs.: ${item.observacao}',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontStyle: FontStyle.italic,
+                                    color: T.redDark)),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(reais(item.total),
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: T.ink)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // linha de baixo: - quantidade +
+              Row(
+                children: [
+                  _passo(Ico.menosItem, () => _mudarQuantidade(item, -1)),
+                  SizedBox(
+                    width: 40,
+                    child: Text('${item.quantidade}',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
                             color: T.ink)),
-                    if (item.nomesDosExtras.isNotEmpty)
-                      Text(item.nomesDosExtras.join(', '),
-                          style:
-                              TextStyle(fontSize: 12, color: T.inkSoft)),
-                  ],
-                ),
-              ),
-              _passo(Ico.menosItem, () => _mudarQuantidade(item, -1)),
-              SizedBox(
-                width: 34,
-                child: Text('${item.quantidade}',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: T.ink)),
-              ),
-              _passo(Ico.maisItem, () => _mudarQuantidade(item, 1)),
-              SizedBox(
-                width: 74,
-                child: Text(reais(item.total),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: T.ink)),
+                  ),
+                  _passo(Ico.maisItem, () => _mudarQuantidade(item, 1)),
+                ],
               ),
             ],
           ),
@@ -537,79 +547,24 @@ class _SheetLancarState extends State<_SheetLancar> {
         ),
       );
 
-  /* ---------------- totais e botões ---------------- */
-  Widget _totais() {
-    if (_carrinho.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: T.campo,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: T.borda),
-      ),
-      child: Column(
-        children: [
-          _linha('Subtotal', _subtotal),
-          if (Sessao.taxaServico > 0)
-            _linha(
-                'Taxa de serviço (${Sessao.taxaServico.toStringAsFixed(0)}%)',
-                _taxa),
-          const SizedBox(height: 5),
-          Divider(color: T.line, height: 1),
-          const SizedBox(height: 7),
-          _linha('Total', _total, forte: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _linha(String rotulo, double valor, {bool forte = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(rotulo,
-                style: TextStyle(
-                    fontSize: forte ? 14.5 : 13,
-                    fontWeight: forte ? FontWeight.w800 : FontWeight.w500,
-                    color: forte ? T.ink : T.inkSoft)),
-            Text(reais(valor),
-                style: TextStyle(
-                    fontSize: forte ? 16 : 13,
-                    fontWeight: forte ? FontWeight.w800 : FontWeight.w700,
-                    color: forte ? T.ink : T.inkMedio)),
-          ],
-        ),
-      );
-
+  /* ---------------- botões ---------------- */
   Widget _botoes() {
     final podeEnviar = _carrinho.isNotEmpty && !_enviando;
     return Row(
       children: [
-        Expanded(
-          child: AfundaAoTocar(
-            onTap: _historico,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: T.campo,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: T.borda),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Ico.historico, size: 16, color: T.inkMedio),
-                  const SizedBox(width: 8),
-                  Text('Histórico',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: T.inkMedio)),
-                ],
-              ),
+        // só o ícone: o botão de enviar fica com o resto da largura
+        AfundaAoTocar(
+          onTap: _historico,
+          child: Container(
+            width: 52,
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: T.campo,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: T.borda),
             ),
+            child: Icon(Ico.historico, size: 18, color: T.inkMedio),
           ),
         ),
         const SizedBox(width: 10),

@@ -9,6 +9,7 @@ import 'sheet_mesa.dart';
 import 'sheet_criar_mesas.dart';
 import 'sheet_apagar_espaco.dart';
 import 'sheet_gerenciar.dart';
+import 'sheet_juntar.dart';
 
 /* ================================================================== *
  *  ABA MESAS — o mapa do salão
@@ -101,11 +102,11 @@ class _TelaMesasState extends State<TelaMesas> {
     final lista = _doEspaco;
     switch (_filtro) {
       case 'ocupada':
-        return lista.where((m) => !m.livre && !m.pedindoConta).toList();
+        return lista.where((m) => !m.pareceLivre && !m.pedindoConta).toList();
       case 'conta':
         return lista.where((m) => m.pedindoConta).toList();
       case 'livre':
-        return lista.where((m) => m.livre).toList();
+        return lista.where((m) => m.pareceLivre).toList();
       default:
         return lista;
     }
@@ -123,30 +124,25 @@ class _TelaMesasState extends State<TelaMesas> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            HeaderVermelho(
-              alturaExtra: 18,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  BarraBoasVindas(direita: _contador()),
-                  const SizedBox(height: 14),
-                  _barraOcupacao(),
-                  const SizedBox(height: 10),
-                  _legenda(),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(kSide, 16, kSide, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // a fila sempre aparece: mesmo sem nenhum espaço
-                  // cadastrado, o botão "+" precisa estar ali
-                  _filtros(),
-                  const SizedBox(height: 14),
-                  _conteudo(),
-                ],
+            // mesmo topo vermelho das abas Ajustes e Perfil
+            HeaderVermelho(child: BarraBoasVindas(direita: _contador())),
+            Transform.translate(
+              offset: const Offset(0, -44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kSide),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // o resumo saiu do vermelho e virou um cartão branco
+                    _resumo(),
+                    const SizedBox(height: 14),
+                    // a fila sempre aparece: mesmo sem nenhum espaço
+                    // cadastrado, o botão "+" precisa estar ali
+                    _filtros(),
+                    const SizedBox(height: 14),
+                    _conteudo(),
+                  ],
+                ),
               ),
             ),
           ],
@@ -161,7 +157,7 @@ class _TelaMesasState extends State<TelaMesas> {
    * ---------------------------------------------------------------- */
   int get _total => _doEspaco.length;
   int get _pedindoConta => _doEspaco.where((m) => m.pedindoConta).length;
-  int get _livres => _doEspaco.where((m) => m.livre).length;
+  int get _livres => _doEspaco.where((m) => m.pareceLivre).length;
   int get _ocupadas => _total - _livres - _pedindoConta;
 
   /// "13/19 ocupadas" — texto simples, sem moldura
@@ -175,8 +171,28 @@ class _TelaMesasState extends State<TelaMesas> {
             letterSpacing: -.2));
   }
 
+  /// cartão branco com a barra de ocupação e a legenda que filtra
+  Widget _resumo() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
+      decoration: BoxDecoration(
+        color: T.card,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _barraOcupacao(),
+          const SizedBox(height: 10),
+          _legenda(),
+        ],
+      ),
+    );
+  }
+
   Widget _barraOcupacao() {
-    final trilho = Colors.white.withOpacity(.28);
+    final trilho = T.campo2;
     if (_total == 0) {
       return Container(
         height: 9,
@@ -193,11 +209,10 @@ class _TelaMesasState extends State<TelaMesas> {
         child: Row(
           children: [
             if (_ocupadas > 0)
-              Expanded(flex: _ocupadas, child: Container(color: Colors.white)),
+              Expanded(flex: _ocupadas, child: Container(color: T.redDark)),
             if (_pedindoConta > 0)
               Expanded(
-                  flex: _pedindoConta,
-                  child: Container(color: const Color(0xFFFCD34D))),
+                  flex: _pedindoConta, child: Container(color: T.amarelo)),
             if (_livres > 0)
               Expanded(flex: _livres, child: Container(color: trilho)),
           ],
@@ -210,11 +225,11 @@ class _TelaMesasState extends State<TelaMesas> {
   Widget _legenda() {
     return Row(
       children: [
-        _pontinho(Colors.white, '$_ocupadas ocupadas', 'ocupada'),
+        _pontinho(T.redDark, '$_ocupadas ocupadas', 'ocupada'),
         const SizedBox(width: 8),
-        _pontinho(const Color(0xFFFCD34D), '$_pedindoConta conta', 'conta'),
+        _pontinho(T.amarelo, '$_pedindoConta conta', 'conta'),
         const SizedBox(width: 8),
-        _pontinho(Colors.white.withOpacity(.45), '$_livres livres', 'livre'),
+        _pontinho(T.green, '$_livres livres', 'livre'),
       ],
     );
   }
@@ -226,14 +241,12 @@ class _TelaMesasState extends State<TelaMesas> {
       onTap: () => setState(() => _filtro = ligado ? null : chave),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
-          color: ligado ? Colors.white.withOpacity(.2) : Colors.transparent,
+          color: ligado ? T.campo : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-              color: ligado
-                  ? Colors.white.withOpacity(.35)
-                  : Colors.transparent),
+          border:
+              Border.all(color: ligado ? T.borda : Colors.transparent),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -248,7 +261,7 @@ class _TelaMesasState extends State<TelaMesas> {
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: ligado ? FontWeight.w800 : FontWeight.w600,
-                    color: Colors.white.withOpacity(ligado ? 1 : .92))),
+                    color: ligado ? T.ink : T.inkMedio)),
           ],
         ),
       ),
@@ -395,6 +408,14 @@ class _TelaMesasState extends State<TelaMesas> {
           'Crie mesas aqui pelo botão + ou escolha outro espaço.');
     }
 
+    // grade ou lista, conforme a escolha em Ajustes
+    return ValueListenableBuilder<bool>(
+      valueListenable: modoLista,
+      builder: (_, lista, __) => lista ? _emLista() : _emGrade(),
+    );
+  }
+
+  Widget _emGrade() {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -409,11 +430,92 @@ class _TelaMesasState extends State<TelaMesas> {
         mainAxisSpacing: 10,
         childAspectRatio: .92,
       ),
-      itemBuilder: (_, i) => _CardMesa(
-        mesa: _visiveis[i],
-        onTap: () => _abrirMesa(_visiveis[i]),
+      itemBuilder: (_, i) => _arrastavel(
+        _visiveis[i],
+        _CardMesa(
+          mesa: _visiveis[i],
+          onTap: () => _abrirMesa(_visiveis[i]),
+        ),
       ),
     );
+  }
+
+  Widget _emLista() {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      primary: false,
+      padding: EdgeInsets.zero,
+      itemCount: _visiveis.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (_, i) => _arrastavel(
+        _visiveis[i],
+        _LinhaMesa(
+          mesa: _visiveis[i],
+          onTap: () => _abrirMesa(_visiveis[i]),
+        ),
+      ),
+    );
+  }
+
+  /* ---------------- arrastar uma mesa em cima da outra ---------------- */
+
+  /// Pode arrastar? Mesa fechada/reservada e mesa que já está num grupo
+  /// ficam de fora — o servidor recusaria de qualquer jeito.
+  bool _podeJuntar(Mesa m) =>
+      !m.reservada && !m.pedindoConta && !m.emGrupo;
+
+  Widget _arrastavel(Mesa mesa, Widget cartao) {
+    // a mesa que não pode entrar em grupo continua sendo só um card
+    if (!_podeJuntar(mesa)) return cartao;
+
+    return DragTarget<Mesa>(
+      onWillAccept: (vinda) =>
+          vinda != null && vinda.id != mesa.id && _podeJuntar(mesa),
+      onAccept: (vinda) => _confirmarJuntar(vinda, mesa),
+      builder: (_, chegando, __) {
+        final destacado = chegando.isNotEmpty;
+        return LongPressDraggable<Mesa>(
+          data: mesa,
+          delay: const Duration(milliseconds: 220),
+          feedback: Opacity(
+            opacity: .9,
+            child: Material(
+              color: Colors.transparent,
+              child: SizedBox(width: 108, child: cartao),
+            ),
+          ),
+          childWhenDragging: Opacity(opacity: .3, child: cartao),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 130),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: destacado ? T.redDark : Colors.transparent,
+                width: 2,
+              ),
+            ),
+            child: cartao,
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmarJuntar(Mesa arrastada, Mesa alvo) async {
+    final juntou = await mostrarJuntarMesas(
+      context,
+      arrastada: arrastada,
+      alvo: alvo,
+    );
+    if (juntou == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Mesas juntadas'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: T.dark2,
+      ));
+      await _atualizar();
+    }
   }
 
   Widget _vazio(IconData icone, String titulo, String texto) => Padding(
@@ -436,7 +538,13 @@ class _TelaMesasState extends State<TelaMesas> {
       );
 
   Future<void> _abrirMesa(Mesa m) async {
-    final mudou = await mostrarMesa(context, m);
+    // mesa encostada em outra não tem comanda própria: abre a principal
+    var alvo = m;
+    if (m.secundariaDoGrupo) {
+      final principais = _mesas.where((x) => x.id == m.juntadaEm);
+      if (principais.isNotEmpty) alvo = principais.first;
+    }
+    final mudou = await mostrarMesa(context, alvo);
     if (mudou == true && mounted) _atualizar();
   }
 }
@@ -468,7 +576,7 @@ class _CardMesa extends StatelessWidget {
       cor = T.azul;
       fundo = T.azulSuave;
       rotulo = 'RESERVADA';
-    } else if (mesa.ocupada) {
+    } else if (mesa.ocupada && !mesa.semConsumo) {
       cor = T.redDark;
       fundo = T.redSuave;
       // mesa ocupada não precisa de rótulo: a borda vermelha, o valor e
@@ -477,7 +585,8 @@ class _CardMesa extends StatelessWidget {
     } else {
       cor = T.green;
       fundo = T.greenSuave;
-      rotulo = 'LIVRE';
+      // mesa aberta sem nenhum item ainda não conta como ocupada
+      rotulo = mesa.semConsumo ? 'ABERTA' : 'LIVRE';
     }
 
     return AfundaAoTocar(
@@ -488,7 +597,8 @@ class _CardMesa extends StatelessWidget {
         decoration: BoxDecoration(
           color: T.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: mesa.livre ? T.borda : cor, width: 1.4),
+          border:
+              Border.all(color: mesa.pareceLivre ? T.borda : cor, width: 1.4),
           boxShadow: sombraCard(),
         ),
         child: Column(
@@ -506,10 +616,13 @@ class _CardMesa extends StatelessWidget {
                     color: fundo,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(mesa.titulo,
+                  child: Text(
+                      mesa.principalDoGrupo
+                          ? mesa.tituloDoGrupo
+                          : mesa.titulo,
                       maxLines: 1,
                       style: TextStyle(
-                          fontSize: 15,
+                          fontSize: mesa.principalDoGrupo ? 13 : 15,
                           fontWeight: FontWeight.w800,
                           color: cor,
                           letterSpacing: -.3)),
@@ -540,7 +653,23 @@ class _CardMesa extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: T.inkMedio)),
             const Spacer(),
-            if (rotulo.isNotEmpty)
+            if (mesa.secundariaDoGrupo)
+              Row(
+                children: [
+                  Icon(Ico.juntar, size: 10, color: cor),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text('JUNTA',
+                        maxLines: 1,
+                        style: TextStyle(
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: .5,
+                            color: cor)),
+                  ),
+                ],
+              )
+            else if (rotulo.isNotEmpty)
               Text(rotulo,
                   style: TextStyle(
                       fontSize: 9.5,
@@ -551,6 +680,110 @@ class _CardMesa extends StatelessWidget {
               Text(reais(mesa.total),
                   style: TextStyle(
                       fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: T.ink)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------------- uma mesa em modo lista ---------------- */
+class _LinhaMesa extends StatelessWidget {
+  final Mesa mesa;
+  final VoidCallback onTap;
+  const _LinhaMesa({required this.mesa, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color cor;
+    late final Color fundo;
+    late final String rotulo;
+
+    if (mesa.pedindoConta) {
+      cor = T.amarelo;
+      fundo = T.amareloSuave;
+      rotulo = 'CONTA';
+    } else if (mesa.reservada) {
+      cor = T.azul;
+      fundo = T.azulSuave;
+      rotulo = 'RESERVADA';
+    } else if (mesa.ocupada && !mesa.semConsumo) {
+      cor = T.redDark;
+      fundo = T.redSuave;
+      rotulo = 'OCUPADA';
+    } else {
+      cor = T.green;
+      fundo = T.greenSuave;
+      rotulo = mesa.semConsumo ? 'ABERTA' : 'LIVRE';
+    }
+
+    final detalhe = <String>[
+      if (mesa.secundariaDoGrupo) 'junta com outra mesa',
+      if (mesa.identificacao.isNotEmpty) mesa.identificacao,
+      if (mesa.pessoas > 0) '${mesa.pessoas} pessoas',
+      if (!mesa.livre && mesa.tempoAberta.isNotEmpty) mesa.tempoAberta,
+    ].join(' · ');
+
+    return AfundaAoTocar(
+      onTap: onTap,
+      escala: .98,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius: BorderRadius.circular(16),
+          border:
+              Border.all(color: mesa.pareceLivre ? T.borda : cor, width: 1.4),
+          boxShadow: sombraCard(),
+        ),
+        child: Row(
+          children: [
+            Container(
+              constraints: const BoxConstraints(minWidth: 42),
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: fundo,
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: Text(
+                  mesa.principalDoGrupo ? mesa.tituloDoGrupo : mesa.titulo,
+                  maxLines: 1,
+                  style: TextStyle(
+                      fontSize: mesa.principalDoGrupo ? 14 : 17,
+                      fontWeight: FontWeight.w800,
+                      color: cor,
+                      letterSpacing: -.3)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(rotulo,
+                      style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .5,
+                          color: cor)),
+                  if (detalhe.isNotEmpty)
+                    Text(detalhe,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: T.inkMedio)),
+                ],
+              ),
+            ),
+            if (mesa.total > 0)
+              Text(reais(mesa.total),
+                  style: TextStyle(
+                      fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: T.ink)),
           ],

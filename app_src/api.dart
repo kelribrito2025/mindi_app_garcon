@@ -358,6 +358,27 @@ class Api {
   static Future<void> pedirConta(int id) =>
       _enviar('POST', '$_raiz/tables/$id/request-bill');
 
+  /* ---------------- juntar e separar mesas ----------------
+     A regra de quem vira a principal é do servidor (o PDV usa a de
+     MENOR número). O app só manda as duas e recarrega o salão.
+     Erros esperados: ALREADY_MERGED, TABLE_REQUESTING_BILL,
+     TABLE_CLOSED, TABLE_NOT_MERGED.                                  */
+
+  /// POST /api/waiter/tables/:id/merge
+  static Future<Map<String, dynamic>> juntarMesas(
+    int id, {
+    required int mesaAlvo,
+  }) async {
+    final r = await _enviar('POST', '$_raiz/tables/$id/merge',
+        corpo: {'targetTableId': mesaAlvo}, chaveUnica: novaChaveUnica());
+    return _mapa(r);
+  }
+
+  /// POST /api/waiter/tables/:id/unmerge
+  static Future<void> separarMesa(int id) =>
+      _enviar('POST', '$_raiz/tables/$id/unmerge',
+          chaveUnica: novaChaveUnica());
+
   /* ================================================================ *
    *  3. CARDÁPIO
    * ================================================================ */

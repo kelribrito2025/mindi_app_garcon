@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /* ================================================================== *
  *  MODELOS — traduzem o JSON da API para o app
  *
@@ -158,6 +160,13 @@ class Mesa {
   final String contaPedidaPor;
   final ResumoComanda? comanda;
 
+  /// juntar mesas: id da mesa principal (null quando não está junta
+  /// ou quando ELA é a principal)
+  final int? juntadaEm;
+
+  /// ids das mesas secundárias — só vem preenchido na principal
+  final List<int> mesasJuntadas;
+
   const Mesa({
     required this.id,
     required this.numero,
@@ -172,6 +181,8 @@ class Mesa {
     this.contaPedidaEm,
     this.contaPedidaPor = '',
     this.comanda,
+    this.juntadaEm,
+    this.mesasJuntadas = const [],
   });
 
   factory Mesa.fromJson(Map<String, dynamic> j) {
@@ -191,7 +202,24 @@ class Mesa {
       contaPedidaPor: (j['requestingBillBy'] ?? '').toString(),
       comanda:
           t is Map ? ResumoComanda.fromJson(t.cast<String, dynamic>()) : null,
+      juntadaEm: j['mergedIntoId'] == null ? null : _int(j['mergedIntoId']),
+      mesasJuntadas: _idsJuntadas(j['mergedTableIds']),
     );
+  }
+
+  /// o servidor manda isso como texto JSON: "[6]" ou "[6, 7]"
+  static List<int> _idsJuntadas(dynamic bruto) {
+    if (bruto == null) return const [];
+    if (bruto is List) return bruto.map(_int).toList();
+    final texto = bruto.toString().trim();
+    if (texto.isEmpty || texto == 'null') return const [];
+    try {
+      final lido = jsonDecode(texto);
+      if (lido is List) return lido.map(_int).toList();
+    } catch (_) {
+      // formato inesperado: melhor ignorar do que quebrar a tela
+    }
+    return const [];
   }
 
   /// o que aparece grande no card
@@ -206,6 +234,32 @@ class Mesa {
   double get total => comanda?.total ?? 0;
   int get itens => comanda?.itens ?? 0;
   int? get comandaId => comanda?.id;
+
+  /// Mesa aberta mas ainda sem nenhum item lançado.
+  /// No card ela continua contando como livre — só vira ocupada
+  /// depois que o garçom lança o primeiro item.
+  bool get semConsumo => ocupada && itens == 0 && !secundariaDoGrupo;
+
+  /* ---------------- juntar mesas ---------------- */
+
+  /// está dentro de um grupo (principal ou secundária)?
+  bool get emGrupo => juntadaEm != null || mesasJuntadas.isNotEmpty;
+
+  /// é a mesa que segura a comanda do grupo
+  bool get principalDoGrupo => mesasJuntadas.isNotEmpty;
+
+  /// é uma mesa encostada em outra (sem comanda própria)
+  bool get secundariaDoGrupo => juntadaEm != null;
+
+  /// "5-6" quando junta; senão o número normal
+  String get tituloDoGrupo => mostrarNumero.isNotEmpty
+      ? mostrarNumero
+      : (principalDoGrupo
+          ? '$numero-${mesasJuntadas.join("-")}'
+          : numero.toString());
+
+  /// É isso que manda na cor do card e nos contadores.
+  bool get pareceLivre => livre || semConsumo;
 
   /// "45min" ou "1h20" desde que a mesa foi aberta
   String get tempoAberta {

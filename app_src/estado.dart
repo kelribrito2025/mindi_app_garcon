@@ -22,6 +22,24 @@ Future<void> salvarTema(bool escuro) async {
   await p.setBool(_kTema, escuro);
 }
 
+/* ---------- Como as mesas aparecem: grade ou lista ---------- */
+
+/// false = grade (padrão), true = lista
+final modoLista = ValueNotifier<bool>(false);
+
+const _kModoLista = 'mesasEmLista';
+
+Future<void> carregarModoDeVer() async {
+  final p = await SharedPreferences.getInstance();
+  modoLista.value = p.getBool(_kModoLista) ?? false;
+}
+
+Future<void> salvarModoDeVer(bool lista) async {
+  modoLista.value = lista;
+  final p = await SharedPreferences.getInstance();
+  await p.setBool(_kModoLista, lista);
+}
+
 /* ---------- "Lembrar-me" da tela de login ---------- */
 const _kLembrar = 'loginLembrar';
 const _kLoginEmail = 'loginEmail';

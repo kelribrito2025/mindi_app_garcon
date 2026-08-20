@@ -6,7 +6,6 @@ import 'sessao.dart';
 import 'estado.dart';
 import 'notificacoes.dart';
 import 'cardapio.dart';
-import 'tela_trocar_senha.dart';
 import 'tela_editar_perfil.dart';
 import 'tela_login.dart';
 
@@ -227,15 +226,6 @@ class _TelaPerfilState extends State<TelaPerfil> {
                               builder: (_) => const TelaEditarPerfil()));
                           if (mounted) setState(() {});
                         },
-                      ),
-                      _Item(
-                        icone: Ico.cadeado,
-                        cor: T.redDark,
-                        fundo: T.redSuave,
-                        titulo: 'Trocar minha senha',
-                        onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const TelaTrocarSenha())),
                       ),
                     ]),
 

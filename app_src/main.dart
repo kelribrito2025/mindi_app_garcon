@@ -14,6 +14,9 @@ Future<void> main() async {
   // lê o tema (claro/escuro) que o garçom escolheu
   await carregarTema();
 
+  // lê se ele prefere ver as mesas em grade ou em lista
+  await carregarModoDeVer();
+
   // lê o login salvo no celular antes de abrir a primeira tela
   await Sessao.carregar();
 

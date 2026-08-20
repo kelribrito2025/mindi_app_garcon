@@ -171,6 +171,9 @@ class _TelaConfigState extends State<TelaConfig> {
                           valor: _formasAceitas),
                     ]),
 
+                    const _Rotulo('COMO VER AS MESAS'),
+                    const _EscolhaDeModo(),
+
                     const SizedBox(height: 16),
                     Text(
                       'A taxa de serviço e as formas de pagamento são '
@@ -280,4 +283,85 @@ class _Cartao extends StatelessWidget {
       ),
     );
   }
+}
+
+/* ---------------- grade ou lista ---------------- */
+class _EscolhaDeModo extends StatelessWidget {
+  const _EscolhaDeModo();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: modoLista,
+      builder: (_, lista, __) => Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _Opcao(
+                icone: Ico.mesas,
+                texto: 'Grade',
+                ativo: !lista,
+                onTap: () => salvarModoDeVer(false),
+              ),
+            ),
+            Expanded(
+              child: _Opcao(
+                icone: Ico.lista,
+                texto: 'Lista',
+                ativo: lista,
+                onTap: () => salvarModoDeVer(true),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Opcao extends StatelessWidget {
+  final IconData icone;
+  final String texto;
+  final bool ativo;
+  final VoidCallback onTap;
+  const _Opcao({
+    required this.icone,
+    required this.texto,
+    required this.ativo,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => AfundaAoTocar(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: ativo ? T.redSuave : Colors.transparent,
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(
+                color: ativo ? T.redDark.withOpacity(.35) : Colors.transparent),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icone, size: 17, color: ativo ? T.redDark : T.inkSoft),
+              const SizedBox(width: 8),
+              Text(texto,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: ativo ? T.redDark : T.inkSoft)),
+            ],
+          ),
+        ),
+      );
 }

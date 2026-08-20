@@ -6,34 +6,42 @@ import 'modelos.dart';
 import 'cardapio.dart';
 
 /* ================================================================== *
- *  1. ESCOLHER COMPLEMENTOS DE UM PRODUTO
- *  Devolve o mapa opção -> quantidade, ou null se cancelou.
+ *  1. MODAL DO ITEM — foto, complementos, observação e quantidade
+ *  Devolve o ItemNovo montado, ou null se cancelou.
  * ================================================================== */
-Future<Map<OpcaoComplemento, int>?> mostrarComplementos(
+Future<ItemNovo?> mostrarItem(
   BuildContext context, {
   required Produto produto,
   required List<GrupoComplemento> grupos,
 }) {
-  return showModalBottomSheet<Map<OpcaoComplemento, int>>(
+  return showModalBottomSheet<ItemNovo>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withOpacity(.55),
-    builder: (_) => _SheetComplementos(produto: produto, grupos: grupos),
+    builder: (_) => _SheetItem(produto: produto, grupos: grupos),
   );
 }
 
-class _SheetComplementos extends StatefulWidget {
+class _SheetItem extends StatefulWidget {
   final Produto produto;
   final List<GrupoComplemento> grupos;
-  const _SheetComplementos({required this.produto, required this.grupos});
+  const _SheetItem({required this.produto, required this.grupos});
 
   @override
-  State<_SheetComplementos> createState() => _SheetComplementosState();
+  State<_SheetItem> createState() => _SheetItemState();
 }
 
-class _SheetComplementosState extends State<_SheetComplementos> {
+class _SheetItemState extends State<_SheetItem> {
   final Map<OpcaoComplemento, int> _escolhas = {};
+  final _obs = TextEditingController();
+  int _quantidade = 1;
+
+  @override
+  void dispose() {
+    _obs.dispose();
+    super.dispose();
+  }
 
   int _totalDoGrupo(GrupoComplemento g) {
     var soma = 0;
@@ -52,6 +60,8 @@ class _SheetComplementosState extends State<_SheetComplementos> {
     _escolhas.forEach((op, q) => soma += op.precoValendo * q);
     return soma;
   }
+
+  double get _total => (widget.produto.precoValendo + _extra) * _quantidade;
 
   void _mudar(GrupoComplemento g, OpcaoComplemento op, int passo) {
     final atual = _escolhas[op] ?? 0;
@@ -78,69 +88,230 @@ class _SheetComplementosState extends State<_SheetComplementos> {
     });
   }
 
+  void _confirmar() {
+    if (!_podeConfirmar) return;
+    Navigator.of(context).pop(ItemNovo(
+      produto: widget.produto,
+      quantidade: _quantidade,
+      observacao: _obs.text.trim(),
+      extras: Map<OpcaoComplemento, int>.from(_escolhas),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final altura = MediaQuery.of(context).size.height;
-    return Container(
-      constraints: BoxConstraints(maxHeight: altura * .85),
-      padding: EdgeInsets.fromLTRB(
-          18, 20, 18, 16 + MediaQuery.of(context).padding.bottom),
-      decoration: BoxDecoration(
-        color: T.card,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: altura * .88),
+        padding: EdgeInsets.fromLTRB(
+            18, 20, 18, 16 + MediaQuery.of(context).padding.bottom),
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _cabecalho(),
+            const SizedBox(height: 14),
+            Flexible(
+              child: SingleChildScrollView(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(widget.produto.nome,
-                        style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.w800,
-                            color: T.ink,
-                            height: 1.15,
-                            letterSpacing: -.4)),
-                    Text(reais(widget.produto.precoValendo),
-                        style: TextStyle(
-                            fontSize: 13, height: 1.25, color: T.inkSoft)),
+                    if (widget.produto.descricao.isNotEmpty) ...[
+                      Text(widget.produto.descricao,
+                          style: TextStyle(
+                              fontSize: 13, height: 1.35, color: T.inkSoft)),
+                      const SizedBox(height: 4),
+                    ],
+                    ...widget.grupos.map(_grupo),
+                    const SizedBox(height: 16),
+                    _campoObservacao(),
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: T.campo,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Ico.fechar, size: 17, color: T.inkMedio),
-                ),
+            ),
+            const SizedBox(height: 14),
+            _rodape(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /* ---------------- topo: foto + nome + preço ---------------- */
+  Widget _cabecalho() {
+    final p = widget.produto;
+    return Row(
+      children: [
+        _foto(),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(p.nome,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: T.ink,
+                      height: 1.15,
+                      letterSpacing: -.4)),
+              Row(
+                children: [
+                  Text(reais(p.precoValendo),
+                      style: TextStyle(
+                          fontSize: 14,
+                          height: 1.25,
+                          fontWeight: FontWeight.w700,
+                          color: T.redDark)),
+                  if (p.precoPromocional != null) ...[
+                    const SizedBox(width: 7),
+                    Text(reais(p.preco),
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            color: T.fraco,
+                            decoration: TextDecoration.lineThrough)),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: widget.grupos.map(_grupo).toList(),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: T.campo,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Ico.fechar, size: 17, color: T.inkMedio),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _foto() {
+    final url = widget.produto.imagem;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 66,
+        height: 66,
+        color: T.campo,
+        alignment: Alignment.center,
+        child: url.isEmpty
+            ? Icon(Ico.cardapio, size: 24, color: T.fraco)
+            : Image.network(
+                url,
+                width: 66,
+                height: 66,
+                fit: BoxFit.cover,
+                // deixa a imagem leve na memória: o cache do Flutter guarda
+                // só o tamanho que a tela usa, não o PNG original inteiro
+                cacheWidth: 200,
+                loadingBuilder: (_, filho, progresso) => progresso == null
+                    ? filho
+                    : Icon(Ico.cardapio, size: 24, color: T.fraco),
+                errorBuilder: (_, __, ___) =>
+                    Icon(Ico.cardapio, size: 24, color: T.fraco),
               ),
+      ),
+    );
+  }
+
+  /* ---------------- observação ---------------- */
+  Widget _campoObservacao() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+          child: Text('Observação',
+              style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: T.ink)),
+        ),
+        TextField(
+          controller: _obs,
+          minLines: 2,
+          maxLines: 3,
+          // o servidor aceita texto livre; 200 é o limite combinado para
+          // não poluir a impressão da comanda
+          maxLength: 200,
+          textCapitalization: TextCapitalization.sentences,
+          style: TextStyle(fontSize: 14.5, color: T.ink),
+          decoration: InputDecoration(
+            hintText: 'Ex.: sem cebola, ao ponto, molho à parte',
+            hintStyle: TextStyle(color: T.fraco, fontSize: 13.5),
+            counterText: '',
+            filled: true,
+            fillColor: T.campo,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: T.borda),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: T.borda),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: T.redDark, width: 1.5),
             ),
           ),
-          const SizedBox(height: 14),
-          AfundaAoTocar(
-            onTap: _podeConfirmar
-                ? () => Navigator.of(context).pop(_escolhas)
-                : () {},
+        ),
+      ],
+    );
+  }
+
+  /* ---------------- rodapé: quantidade + adicionar ---------------- */
+  Widget _rodape() {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          decoration: BoxDecoration(
+            color: T.campo,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: T.borda),
+          ),
+          child: Row(
+            children: [
+              _passo(Ico.menosItem, () {
+                if (_quantidade > 1) setState(() => _quantidade--);
+              }),
+              SizedBox(
+                width: 34,
+                child: Text('$_quantidade',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: T.ink)),
+              ),
+              _passo(Ico.maisItem, () => setState(() => _quantidade++)),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: AfundaAoTocar(
+            onTap: _podeConfirmar ? _confirmar : () {},
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               alignment: Alignment.center,
@@ -151,7 +322,7 @@ class _SheetComplementosState extends State<_SheetComplementos> {
               ),
               child: Text(
                   _podeConfirmar
-                      ? 'Adicionar · ${reais(widget.produto.precoValendo + _extra)}'
+                      ? 'Adicionar · ${reais(_total)}'
                       : 'Escolha as opções obrigatórias',
                   style: TextStyle(
                       fontSize: 15,
@@ -159,11 +330,12 @@ class _SheetComplementosState extends State<_SheetComplementos> {
                       color: _podeConfirmar ? Colors.white : T.fraco)),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
+  /* ---------------- grupos de complemento ---------------- */
   Widget _grupo(GrupoComplemento g) {
     final faltando = g.obrigatorio && _totalDoGrupo(g) < g.minimo;
     return Column(
@@ -300,16 +472,40 @@ Future<String?> mostrarIdentificacao(BuildContext context,
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Identificação da mesa',
-                style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    color: T.ink,
-                    height: 1.15,
-                    letterSpacing: -.4)),
-            Text('Aparece no card da mesa, para achar rápido',
-                style:
-                    TextStyle(fontSize: 13, height: 1.25, color: T.inkSoft)),
+            Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: T.redSuave,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(Ico.perfil, size: 23, color: T.redDark),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Identificação da mesa',
+                          style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              color: T.ink,
+                              height: 1.15,
+                              letterSpacing: -.4)),
+                      Text('Aparece no card da mesa, para achar rápido',
+                          style: TextStyle(
+                              fontSize: 13,
+                              height: 1.25,
+                              color: T.inkSoft)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: campo,
@@ -548,6 +744,17 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
         children: [
           Row(
             children: [
+              Container(
+                width: 50,
+                height: 50,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: T.redSuave,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(Ico.historico, size: 23, color: T.redDark),
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

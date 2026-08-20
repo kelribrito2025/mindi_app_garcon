@@ -178,6 +178,36 @@ class _SheetMesaState extends State<_SheetMesa> {
     }
   }
 
+  /* ---------------- separar mesas ---------------- */
+
+  bool _separando = false;
+
+  Future<void> _separar() async {
+    setState(() => _separando = true);
+    try {
+      // manda a própria mesa: o servidor tira ela do grupo
+      await Api.separarMesa(_mesa.id);
+      _mudou = true;
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      _avisar('Mesas separadas.');
+    } on ApiErro catch (e) {
+      if (!mounted) return;
+      setState(() => _separando = false);
+      if (e.codigo == 'TABLE_NOT_MERGED') {
+        _avisar('Essa mesa já não estava junta com outra.');
+      } else if (e.codigo == 'TABLE_NOT_FOUND') {
+        _avisar('Essa mesa não existe mais.');
+      } else {
+        _avisar(e.mensagem);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _separando = false);
+      _avisar('Não deu para separar agora. Tente de novo.');
+    }
+  }
+
   /* ---------------- tela ---------------- */
 
   @override
@@ -237,7 +267,10 @@ class _SheetMesaState extends State<_SheetMesa> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(m.nome.isNotEmpty ? m.nome : 'Mesa ${m.titulo}',
+              Text(
+                  m.principalDoGrupo
+                      ? 'Mesa ${m.tituloDoGrupo}'
+                      : (m.nome.isNotEmpty ? m.nome : 'Mesa ${m.titulo}'),
                   style: TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w800,
@@ -273,6 +306,11 @@ class _SheetMesaState extends State<_SheetMesa> {
       return m.capacidade > 0 ? 'Livre · até ${m.capacidade} pessoas' : 'Livre';
     }
     final partes = <String>[];
+    if (m.principalDoGrupo) {
+      partes.add(m.mesasJuntadas.length == 1
+          ? 'junta com a mesa ${m.mesasJuntadas.first}'
+          : 'junta com ${m.mesasJuntadas.length} mesas');
+    }
     if (m.pessoas > 0) partes.add('${m.pessoas} pessoas');
     if (m.tempoAberta.isNotEmpty) partes.add('aberta há ${m.tempoAberta}');
     if (m.identificacao.isNotEmpty) partes.add(m.identificacao);
@@ -338,12 +376,6 @@ class _SheetMesaState extends State<_SheetMesa> {
             ],
           ),
         ),
-        if (_mesa.capacidade > 0) ...[
-          const SizedBox(height: 8),
-          Text('Essa mesa comporta ${_mesa.capacidade} pessoas',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12.5, color: T.inkSoft)),
-        ],
       ],
     );
   }
@@ -372,6 +404,8 @@ class _SheetMesaState extends State<_SheetMesa> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 30),
         child: Column(
+          // ocupa o espaço livre do modal e centraliza o aviso nele
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Ico.comanda, size: 34, color: T.fraco),
             const SizedBox(height: 10),
@@ -557,6 +591,16 @@ class _SheetMesaState extends State<_SheetMesa> {
             ),
           ],
         ),
+        ],
+        if (_mesa.principalDoGrupo) ...[
+          const SizedBox(height: 9),
+          _BotaoGrande(
+            texto: 'Separar mesas',
+            icone: Ico.separar,
+            secundario: true,
+            carregando: _separando,
+            onTap: _ocupado ? null : _separar,
+          ),
         ],
       ],
     );
