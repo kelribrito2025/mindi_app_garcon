@@ -351,6 +351,7 @@ jobs:
           grep -q "google_fonts" pubspec.yaml || flutter pub add google_fonts
           grep -q "vibration" pubspec.yaml || flutter pub add vibration
           grep -q "flutter_local_notifications" pubspec.yaml || flutter pub add flutter_local_notifications
+          grep -q "shorebird_code_push" pubspec.yaml || flutter pub add shorebird_code_push
           cat pubspec.yaml
 
       - name: Conferir o arquivo do Shorebird
