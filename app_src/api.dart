@@ -358,6 +358,70 @@ class Api {
   static Future<void> pedirConta(int id) =>
       _enviar('POST', '$_raiz/tables/$id/request-bill');
 
+  /// POST /api/waiter/tables/:id/transfer-items
+  /// Move itens da mesa :id para outra mesa.
+  /// Erros: SOURCE_TAB_CLOSED, SAME_TABLE, TABLE_NOT_FOUND.
+  static Future<Map<String, dynamic>> transferirItens(
+    int id, {
+    required int mesaDestino,
+    required List<int> itens,
+    bool levarIdentificacao = false,
+  }) async =>
+      _mapa(await _enviar('POST', '$_raiz/tables/$id/transfer-items',
+          corpo: {
+            'targetTableId': mesaDestino,
+            'itemIds': itens,
+            'transferLabel': levarIdentificacao,
+          },
+          chaveUnica: novaChaveUnica()));
+
+  /* ---------------- impressora ----------------
+     ATENÇÃO: estes dois ainda NÃO existem no servidor. A tela já trata
+     a ausência deles sem quebrar (404 = "não dá para conferir daqui"). */
+
+  /// GET /api/waiter/printer/status
+  static Future<Map<String, dynamic>> impressora() async =>
+      _mapa(await _enviar('GET', '$_raiz/printer/status'));
+
+  /// POST /api/waiter/printer/test — sai um cupom pequeno de teste
+  static Future<void> testarImpressora() =>
+      _enviar('POST', '$_raiz/printer/test', chaveUnica: novaChaveUnica());
+
+  /* ---------------- pagamentos da comanda ----------------
+     Fechar parcial = o cliente paga ALGUNS ITENS e vai embora; a mesa
+     continua aberta com o resto.
+     Pagamento avulso = abate um VALOR do saldo, sem escolher item.
+     Erros: TAB_ALREADY_CLOSED, AMOUNT_EXCEEDS_BALANCE, NO_VALID_ITEMS. */
+
+  /// POST /api/waiter/tables/:id/partial-close
+  static Future<void> fecharParcial(
+    int id, {
+    required List<int> itens,
+    required String formaPagamento,
+  }) =>
+      _enviar('POST', '$_raiz/tables/$id/partial-close',
+          corpo: {'itemIds': itens, 'paymentMethod': formaPagamento},
+          chaveUnica: novaChaveUnica());
+
+  /// POST /api/waiter/tables/:id/loose-payment
+  static Future<void> pagamentoAvulso(
+    int id, {
+    required double valor,
+    required String formaPagamento,
+    String observacao = '',
+  }) =>
+      _enviar('POST', '$_raiz/tables/$id/loose-payment',
+          corpo: {
+            'amount': valor,
+            'paymentMethod': formaPagamento,
+            if (observacao.trim().isNotEmpty) 'notes': observacao.trim(),
+          },
+          chaveUnica: novaChaveUnica());
+
+  /// GET /api/waiter/tables/:id/payments
+  static Future<List<Map<String, dynamic>>> pagamentosDaMesa(int id) async =>
+      _lista(await _enviar('GET', '$_raiz/tables/$id/payments'), 'payments');
+
   /* ---------------- juntar e separar mesas ----------------
      A regra de quem vira a principal é do servidor (o PDV usa a de
      MENOR número). O app só manda as duas e recarrega o salão.

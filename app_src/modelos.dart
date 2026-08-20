@@ -555,10 +555,16 @@ class GrupoComplemento {
 String formaPagamento(String? p) {
   switch ((p ?? '').toLowerCase()) {
     case 'cash':
+    case 'dinheiro':
+    case 'money':
       return 'Dinheiro';
     case 'pix':
       return 'PIX';
     case 'card':
+    case 'cartao':
+    case 'cartão':
+    case 'credit':
+    case 'debit':
       return 'Cartão';
     default:
       return p == null || p.isEmpty ? '—' : p;
@@ -634,6 +640,48 @@ class ComandaFechada {
 }
 
 /* ================================================================== *
+ *  UM PAGAMENTO DA COMANDA
+ *  Vem de GET /tables/:id/payments e também dentro do histórico.
+ * ================================================================== */
+class Pagamento {
+  final int id;
+  final double valor;
+  final String forma;
+  final String observacao;
+  final String registradoPor;
+  final DateTime? quando;
+
+  const Pagamento({
+    required this.id,
+    this.valor = 0,
+    this.forma = '',
+    this.observacao = '',
+    this.registradoPor = '',
+    this.quando,
+  });
+
+  factory Pagamento.fromJson(Map<String, dynamic> j) => Pagamento(
+        id: _int(j['id']),
+        valor: _num(j['amount']),
+        forma: (j['paymentMethod'] ?? '').toString(),
+        observacao: (j['notes'] ?? '').toString(),
+        registradoPor: (j['createdByName'] ?? j['registeredBy'] ?? '')
+            .toString(),
+        quando: _data(j['createdAt']),
+      );
+
+  String get formaBonita => formaPagamento(forma);
+
+  /// "16:45"
+  String get hora {
+    final d = quando;
+    if (d == null) return '';
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(d.hour)}:${dois(d.minute)}';
+  }
+}
+
+/* ================================================================== *
  *  COMANDA NO HISTÓRICO DE GANHOS DO GARÇOM
  *  Vem de GET /api/waiter/history — uma mesa que ELE fechou.
  * ================================================================== */
@@ -646,6 +694,12 @@ class ComandaDoGarcom {
   final bool comissaoPaga;
   final DateTime? fechadaEm;
 
+  /// forma usada no fechamento final
+  final String formaDoFechamento;
+
+  /// pagamentos avulsos / parciais que aconteceram nessa comanda
+  final List<Pagamento> pagamentos;
+
   const ComandaDoGarcom({
     required this.id,
     this.mesa = '',
@@ -654,6 +708,8 @@ class ComandaDoGarcom {
     this.comissao = 0,
     this.comissaoPaga = true,
     this.fechadaEm,
+    this.formaDoFechamento = '',
+    this.pagamentos = const [],
   });
 
   factory ComandaDoGarcom.fromJson(Map<String, dynamic> j) => ComandaDoGarcom(
@@ -670,9 +726,35 @@ class ComandaDoGarcom {
             : _num(j['commission']),
         comissaoPaga: j['commissionPaid'] != false,
         fechadaEm: _data(j['closedAt']),
+        formaDoFechamento: (j['paymentMethod'] ?? '').toString(),
+        pagamentos: (j['payments'] is List)
+            ? (j['payments'] as List)
+                .whereType<Map>()
+                .map((e) => Pagamento.fromJson(e.cast<String, dynamic>()))
+                .toList()
+            : const [],
       );
 
   String get titulo => mesa.isEmpty ? 'Mesa' : 'Mesa $mesa';
+
+  /// "Dinheiro" ou "Dinheiro, Cartão e PIX" — tudo que entrou nessa mesa
+  String get formasUsadas {
+    final nomes = <String>[];
+    for (final p in pagamentos) {
+      final n = p.formaBonita;
+      if (n.isNotEmpty && n != '—' && !nomes.contains(n)) nomes.add(n);
+    }
+    final fim = formaPagamento(formaDoFechamento);
+    if (fim.isNotEmpty && fim != '—' && !nomes.contains(fim)) nomes.add(fim);
+
+    if (nomes.isEmpty) return '';
+    if (nomes.length == 1) return nomes.first;
+    return '${nomes.sublist(0, nomes.length - 1).join(', ')} e ${nomes.last}';
+  }
+
+  /// quanto entrou em pagamentos avulsos antes do fechamento
+  double get totalAvulso =>
+      pagamentos.fold(0.0, (soma, p) => soma + p.valor);
 
   /// "16:45"
   String get hora {

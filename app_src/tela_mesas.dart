@@ -94,8 +94,12 @@ class _TelaMesasState extends State<TelaMesas> {
   }
 
   /// todas as mesas do espaço aberto (é o que a legenda conta)
-  List<Mesa> get _doEspaco =>
-      _mesas.where((m) => m.espacoId == _espacoAberto).toList();
+  /// As mesas do espaço aberto. A mesa que foi encostada em outra
+  /// (secundária) NÃO entra: ela já aparece dentro do card da principal,
+  /// como "18-19". Mostrar as duas confundiria e contaria em dobro.
+  List<Mesa> get _doEspaco => _mesas
+      .where((m) => m.espacoId == _espacoAberto && !m.secundariaDoGrupo)
+      .toList();
 
   /// o que aparece na grade: o espaço aberto, já com o filtro aplicado
   List<Mesa> get _visiveis {
@@ -360,12 +364,17 @@ class _TelaMesasState extends State<TelaMesas> {
     // grade ou lista, conforme a escolha em Ajustes
     return ValueListenableBuilder<bool>(
       valueListenable: modoLista,
-      builder: (_, lista, __) => lista ? _emLista() : _emGrade(),
+      builder: (_, lista, __) => lista
+          ? _emLista()
+          : ValueListenableBuilder<bool>(
+              valueListenable: cincoPorLinha,
+              builder: (_, cinco, __) => _emGrade(cinco),
+            ),
     );
   }
 
-  Widget _emGrade() {
-    return GridView.builder(
+  Widget _emGrade(bool cinco) {
+    final grade = GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       // sem isso a grade se acha a rolagem principal da tela e reserva
@@ -373,8 +382,8 @@ class _TelaMesasState extends State<TelaMesas> {
       primary: false,
       padding: EdgeInsets.zero,
       itemCount: _visiveis.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cinco ? 5 : 3,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
         childAspectRatio: .92,
@@ -386,6 +395,22 @@ class _TelaMesasState extends State<TelaMesas> {
           onTap: () => _abrirMesa(_visiveis[i]),
         ),
       ),
+    );
+
+    if (!cinco) return grade;
+
+    // 5 por linha SEM diminuir o card: a grade fica mais larga que a
+    // tela e o garçom arrasta para o lado para ver as outras duas.
+    return LayoutBuilder(
+      builder: (_, espaco) {
+        final larguraDoCard = (espaco.maxWidth - 10 * 2) / 3;
+        final larguraTotal = larguraDoCard * 5 + 10 * 4;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: SizedBox(width: larguraTotal, child: grade),
+        );
+      },
     );
   }
 
@@ -409,21 +434,47 @@ class _TelaMesasState extends State<TelaMesas> {
 
   /* ---------------- arrastar uma mesa em cima da outra ---------------- */
 
-  /// Pode arrastar? Mesa fechada/reservada e mesa que já está num grupo
-  /// ficam de fora — o servidor recusaria de qualquer jeito.
-  bool _podeJuntar(Mesa m) =>
+  /// Pode ARRASTAR esta mesa para cima de outra?
+  /// Mesa reservada, com conta pedida, ou que já está dentro de um grupo
+  /// fica de fora — para tirar do grupo existe o "Separar mesas".
+  bool _podeArrastar(Mesa m) =>
       !m.reservada && !m.pedindoConta && !m.emGrupo;
 
-  Widget _arrastavel(Mesa mesa, Widget cartao) {
-    // a mesa que não pode entrar em grupo continua sendo só um card
-    if (!_podeJuntar(mesa)) return cartao;
+  /// Pode RECEBER outra mesa em cima?
+  /// Aqui o grupo é permitido: é assim que se junta a 3ª, a 4ª mesa —
+  /// solta em cima do card "18-19" e ele vira "18-19-20".
+  bool _podeReceber(Mesa m) =>
+      !m.reservada && !m.pedindoConta && !m.secundariaDoGrupo;
 
-    return DragTarget<Mesa>(
+  Widget _arrastavel(Mesa mesa, Widget cartao) {
+    // mesa que não arrasta nem recebe continua sendo só um card
+    if (!_podeArrastar(mesa) && !_podeReceber(mesa)) return cartao;
+
+    // o LayoutBuilder mede o tamanho real do card na grade (ou na lista):
+    // sem isso o card encolhe na hora de arrastar
+    return LayoutBuilder(builder: (_, espaco) {
+      final largura = espaco.maxWidth.isFinite ? espaco.maxWidth : 110.0;
+      final altura = espaco.maxHeight.isFinite ? espaco.maxHeight : null;
+
+      return DragTarget<Mesa>(
       onWillAccept: (vinda) =>
-          vinda != null && vinda.id != mesa.id && _podeJuntar(mesa),
+          vinda != null && vinda.id != mesa.id && _podeReceber(mesa),
       onAccept: (vinda) => _confirmarJuntar(vinda, mesa),
       builder: (_, chegando, __) {
         final destacado = chegando.isNotEmpty;
+        if (!_podeArrastar(mesa)) {
+          // ela não sai do lugar, mas continua podendo receber outra.
+          // Se for um grupo, segurar o dedo abre o "separar mesas".
+          if (mesa.principalDoGrupo) {
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onLongPress: () => _separarGrupo(mesa),
+              child: _comDestaque(cartao, destacado),
+            );
+          }
+          return _comDestaque(cartao, destacado);
+        }
+
         return LongPressDraggable<Mesa>(
           data: mesa,
           delay: const Duration(milliseconds: 220),
@@ -431,32 +482,59 @@ class _TelaMesasState extends State<TelaMesas> {
             opacity: .9,
             child: Material(
               color: Colors.transparent,
-              child: SizedBox(width: 108, child: cartao),
+              child: SizedBox(width: largura, height: altura, child: cartao),
             ),
           ),
           childWhenDragging: Opacity(opacity: .3, child: cartao),
           // o destaque é desenhado POR CIMA do card, não em volta:
           // uma moldura de verdade encolheria o card em 4px sempre,
           // mesmo transparente
-          child: Stack(
-            children: [
-              cartao,
-              if (destacado)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: T.redDark, width: 2),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+          child: _comDestaque(cartao, destacado),
         );
       },
+      );
+    });
+  }
+
+  /// moldura vermelha desenhada POR CIMA do card quando outra mesa está
+  /// pairando em cima dele (uma borda de verdade encolheria o card)
+  Widget _comDestaque(Widget cartao, bool destacado) => Stack(
+        children: [
+          cartao,
+          if (destacado)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: T.redDark, width: 2),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+
+  /// segurar o dedo num card de grupo abre a separação
+  Future<void> _separarGrupo(Mesa principal) async {
+    final secundarias = _mesas
+        .where((m) => principal.mesasJuntadas.contains(m.id))
+        .toList();
+    if (secundarias.isEmpty) return;
+
+    final mudou = await mostrarSepararMesas(
+      context,
+      principal: principal,
+      secundarias: secundarias,
     );
+    if (mudou == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Mesas separadas'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: T.dark2,
+      ));
+      await _atualizar();
+    }
   }
 
   Future<void> _confirmarJuntar(Mesa arrastada, Mesa alvo) async {

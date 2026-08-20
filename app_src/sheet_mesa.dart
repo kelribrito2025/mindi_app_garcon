@@ -5,6 +5,8 @@ import 'api.dart';
 import 'modelos.dart';
 import 'sessao.dart';
 import 'sheet_fechar.dart';
+import 'sheet_pagamentos.dart';
+import 'sheet_transferir.dart';
 import 'sheet_lancar_itens.dart';
 
 /* ================================================================== *
@@ -157,14 +159,91 @@ class _SheetMesaState extends State<_SheetMesa> {
     if (escolha == null || !mounted) return;
     if (escolha == 'solicitar') {
       await _pedirConta();
+    } else if (escolha == 'parcial') {
+      await _fecharParcial();
+    } else if (escolha == 'avulso') {
+      await _pagamentoAvulso();
     } else if (escolha == 'fechar') {
       await _fechar();
     }
   }
 
+  /// leva itens desta mesa para outra
+  Future<void> _transferir() async {
+    final itens =
+        _comanda?.itens.where((i) => !i.cancelado).toList() ?? const [];
+    if (itens.isEmpty) {
+      _avisar('Não há itens para transferir.');
+      return;
+    }
+    // devolve true quando a mesa de origem ficou vazia e o servidor
+    // fechou ela; false quando ainda sobrou item; null quando cancelou
+    final fechou = await mostrarTransferir(
+      context,
+      origem: _mesa,
+      itens: itens,
+    );
+    if (fechou == null || !mounted) return;
+
+    _mudou = true;
+    _avisar('Itens transferidos.');
+    if (fechou) {
+      // a mesa não existe mais como aberta: sai do modal
+      Navigator.of(context).pop(true);
+    } else {
+      await _carregar();
+    }
+  }
+
+  String get _nomeDaMesa =>
+      _mesa.principalDoGrupo ? _mesa.tituloDoGrupo : _mesa.titulo;
+
+  /// o cliente paga só os itens dele e vai embora
+  Future<void> _fecharParcial() async {
+    final itens =
+        _comanda?.itens.where((i) => !i.cancelado).toList() ?? const [];
+    if (itens.isEmpty) {
+      _avisar('Não há itens para pagar nessa mesa.');
+      return;
+    }
+    final feito = await mostrarFecharParcial(
+      context,
+      mesaId: _mesa.id,
+      mesa: _nomeDaMesa,
+      itens: itens,
+    );
+    if (feito == true && mounted) {
+      _mudou = true;
+      _avisar('Pagamento registrado.');
+      await _carregar();
+    }
+  }
+
+  /// abate um valor do saldo, sem escolher item
+  Future<void> _pagamentoAvulso() async {
+    final saldo = _comanda?.falta ?? 0;
+    if (saldo <= 0) {
+      _avisar('Essa mesa não tem saldo em aberto.');
+      return;
+    }
+    final feito = await mostrarPagamentoAvulso(
+      context,
+      mesaId: _mesa.id,
+      mesa: _nomeDaMesa,
+      saldo: saldo,
+    );
+    if (feito == true && mounted) {
+      _mudou = true;
+      _avisar('Pagamento registrado.');
+      await _carregar();
+    }
+  }
+
   Future<void> _fechar() async {
     final total = _comanda?.falta ?? 0;
-    final resultado = await mostrarFechamento(context, total: total);
+    final resultado = await mostrarFechamento(context,
+        total: total,
+        mesa: _mesa.principalDoGrupo ? _mesa.tituloDoGrupo : _mesa.titulo);
     if (resultado == null || !mounted) return;
 
     setState(() => _ocupado = true);
@@ -484,14 +563,16 @@ class _SheetMesaState extends State<_SheetMesa> {
             height: 26,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: i.pronto ? T.greenSuave : T.campo,
+              // fundo claro, número escuro: verde quando o item já saiu
+              // da cozinha, vermelho enquanto não saiu
+              color: i.pronto ? T.greenSuave : T.redSuave,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Text('${i.quantidade}',
                 style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w800,
-                    color: i.pronto ? T.greenEscuro : T.inkMedio)),
+                    color: i.pronto ? T.greenEscuro : T.redDark)),
           ),
           const SizedBox(width: 11),
           Expanded(
@@ -573,24 +654,44 @@ class _SheetMesaState extends State<_SheetMesa> {
 
     return Column(
       children: [
-        _BotaoGrande(
-          texto: 'Lançar itens',
-          icone: Ico.cardapio,
-          carregando: false,
-          onTap: _lancarItens,
+        // os dois lado a lado: sobra espaço e cabe mais item na tela
+        Row(
+          children: [
+            Expanded(
+              flex: temItens ? 3 : 1,
+              child: _BotaoGrande(
+                texto: 'Lançar itens',
+                icone: Ico.cardapio,
+                carregando: false,
+                onTap: _lancarItens,
+              ),
+            ),
+            if (temItens) ...[
+              const SizedBox(width: 9),
+              Expanded(
+                flex: 2,
+                // dentro dele o garçom escolhe entre avisar o balcão,
+                // pagar parcial, avulso ou fechar a mesa
+                child: _BotaoGrande(
+                  texto: 'Conta',
+                  icone: Ico.conta,
+                  secundario: true,
+                  carregando: _ocupado,
+                  onTap: _ocupado ? null : _abrirOpcoesDaConta,
+                ),
+              ),
+              const SizedBox(width: 9),
+              // só o ícone: leva itens desta mesa para outra
+              _BotaoGrande(
+                texto: '',
+                icone: Ico.transferir,
+                secundario: true,
+                carregando: false,
+                onTap: _ocupado ? null : _transferir,
+              ),
+            ],
+          ],
         ),
-        if (temItens) ...[
-          const SizedBox(height: 9),
-          // um botão só: dentro dele o garçom escolhe entre avisar o
-          // balcão ou fechar a mesa na hora
-          _BotaoGrande(
-            texto: 'Solicitar conta',
-            icone: Ico.conta,
-            secundario: true,
-            carregando: _ocupado,
-            onTap: _ocupado ? null : _abrirOpcoesDaConta,
-          ),
-        ],
         if (_mesa.principalDoGrupo) ...[
           const SizedBox(height: 9),
           _BotaoGrande(
@@ -630,7 +731,8 @@ class _BotaoGrande extends StatelessWidget {
     return AfundaAoTocar(
       onTap: desligado || carregando ? () {} : onTap!,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 15),
+        padding: EdgeInsets.symmetric(
+            vertical: 15, horizontal: texto.isEmpty ? 16 : 0),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           gradient: secundario ? null : kGradRed,
@@ -655,18 +757,21 @@ class _BotaoGrande extends StatelessWidget {
                   color: secundario
                       ? (desligado ? T.fraco : T.inkMedio)
                       : Colors.white),
-            const SizedBox(width: 9),
-            Flexible(
-              child: Text(texto,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w800,
-                      color: secundario
-                          ? (desligado ? T.fraco : T.inkMedio)
-                          : Colors.white)),
-            ),
+            // botão só de ícone: sem texto, sem o espaço do texto
+            if (texto.isNotEmpty) ...[
+              const SizedBox(width: 9),
+              Flexible(
+                child: Text(texto,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w800,
+                        color: secundario
+                            ? (desligado ? T.fraco : T.inkMedio)
+                            : Colors.white)),
+              ),
+            ],
           ],
         ),
       ),

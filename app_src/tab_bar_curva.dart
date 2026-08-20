@@ -68,7 +68,13 @@ class _TabBarCurvaState extends State<TabBarCurva>
         return AnimatedBuilder(
           animation: _c,
           builder: (context, _) {
-            final cx = larguraAba * _posAtual() + larguraAba / 2;
+            final bruto = larguraAba * _posAtual() + larguraAba / 2;
+
+            // Com 4 abas o centro da primeira e da última cai muito perto
+            // da ponta da barra: a bolha ficava pendurada para fora e o
+            // recorte não batia com ela. Aqui os dois usam o MESMO limite.
+            const nw = kNotchR * 1.2;
+            final cx = bruto.clamp(kBarR + nw, w - kBarR - nw).toDouble();
 
             return SizedBox(
               height: kBarH,
@@ -159,6 +165,7 @@ class _PintorBarra extends CustomPainter {
     final w = size.width, h = size.height;
     const r = kBarR, nr = kNotchR;
     const nw = nr * 1.2;
+    // quem manda no limite é quem desenha a bolha; aqui só repete
     final double c = cx.clamp(r + nw, w - r - nw).toDouble();
 
     final path = Path()

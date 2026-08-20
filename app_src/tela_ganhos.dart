@@ -6,6 +6,7 @@ import 'icones.dart';
 import 'api.dart';
 import 'sessao.dart';
 import 'modelos.dart';
+import 'sheet_detalhe_ganho.dart';
 
 /* ================================================================== *
  *  ABA GANHOS — a comissão do garçom
@@ -397,6 +398,7 @@ class _TelaGanhosState extends State<TelaGanhos> {
       itemBuilder: (context, i) => _LinhaMesaFechada(
         comanda: _mesas[i],
         ultima: i == _mesas.length - 1,
+        aoTocar: () => mostrarDetalheDaMesa(context, _mesas[i]),
       ),
     );
   }
@@ -430,12 +432,17 @@ class _TelaGanhosState extends State<TelaGanhos> {
 class _LinhaMesaFechada extends StatelessWidget {
   final ComandaDoGarcom comanda;
   final bool ultima;
-  const _LinhaMesaFechada({required this.comanda, required this.ultima});
+  final VoidCallback aoTocar;
+  const _LinhaMesaFechada(
+      {required this.comanda, required this.ultima, required this.aoTocar});
 
   @override
   Widget build(BuildContext context) {
     final c = comanda;
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: aoTocar,
+      child: Container(
       height: _alturaLinha,
       decoration: BoxDecoration(
         border: ultima ? null : Border(bottom: BorderSide(color: T.line)),
@@ -458,14 +465,30 @@ class _LinhaMesaFechada extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c.titulo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w700,
-                        color: T.ink,
-                        letterSpacing: -.2)),
+                Row(
+                  children: [
+                    Text(c.titulo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: T.ink,
+                            letterSpacing: -.2)),
+                    if (c.formasUsadas.isNotEmpty) ...[
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(c.formasUsadas,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: T.inkMedio)),
+                      ),
+                    ],
+                  ],
+                ),
                 const SizedBox(height: 2),
                 Text(
                     [
@@ -492,7 +515,10 @@ class _LinhaMesaFechada extends StatelessWidget {
                   style: TextStyle(fontSize: 11, color: T.inkSoft)),
             ],
           ),
+          const SizedBox(width: 2),
+          Icon(Ico.avancar, size: 19, color: T.fraco),
         ],
+      ),
       ),
     );
   }

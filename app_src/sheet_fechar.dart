@@ -18,19 +18,20 @@ class Fechamento {
 }
 
 Future<Fechamento?> mostrarFechamento(BuildContext context,
-    {required double total}) {
+    {required double total, required String mesa}) {
   return showModalBottomSheet<Fechamento>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withOpacity(.55),
-    builder: (_) => _SheetFechar(total: total),
+    builder: (_) => _SheetFechar(total: total, mesa: mesa),
   );
 }
 
 class _SheetFechar extends StatefulWidget {
   final double total;
-  const _SheetFechar({required this.total});
+  final String mesa;
+  const _SheetFechar({required this.total, required this.mesa});
 
   @override
   State<_SheetFechar> createState() => _SheetFecharState();
@@ -110,8 +111,10 @@ class _SheetFecharState extends State<_SheetFechar> {
           children: [
             Row(
               children: [
+                _QuadroDaMesa(numero: widget.mesa),
+                const SizedBox(width: 13),
                 Expanded(
-                  child: Text('Fechar a mesa',
+                  child: Text('Fechar mesa ${widget.mesa}',
                       style: TextStyle(
                           fontSize: 19,
                           fontWeight: FontWeight.w800,
@@ -339,29 +342,20 @@ Future<String?> mostrarOpcoesDaConta(
         children: [
           Row(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: T.redSuave,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(Ico.conta, size: 23, color: T.redDark),
-              ),
+              _QuadroDaMesa(numero: mesa),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Fechar mesa',
+                    Text('Fechar mesa $mesa',
                         style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                             color: T.ink,
                             height: 1.15,
                             letterSpacing: -.4)),
-                    Text('Mesa $mesa',
+                    Text('Escolha o que fazer com a conta',
                         style: TextStyle(
                             fontSize: 13, height: 1.25, color: T.inkSoft)),
                   ],
@@ -393,6 +387,26 @@ Future<String?> mostrarOpcoesDaConta(
                 : 'Notifica o balcão para fechar a mesa',
             ativo: !contaJaPedida,
             onTap: () => Navigator.of(ctx).pop('solicitar'),
+          ),
+          const SizedBox(height: 10),
+          _OpcaoDaConta(
+            icone: Ico.recibo,
+            cor: T.azul,
+            fundo: T.azulSuave,
+            titulo: 'Fechar parcial',
+            texto: 'O cliente paga só os itens dele e vai embora',
+            ativo: true,
+            onTap: () => Navigator.of(ctx).pop('parcial'),
+          ),
+          const SizedBox(height: 10),
+          _OpcaoDaConta(
+            icone: Ico.conta,
+            cor: T.green,
+            fundo: T.greenSuave,
+            titulo: 'Pagamento avulso',
+            texto: 'Abate um valor do saldo da mesa',
+            ativo: true,
+            onTap: () => Navigator.of(ctx).pop('avulso'),
           ),
           const SizedBox(height: 10),
           _OpcaoDaConta(
@@ -473,6 +487,35 @@ class _OpcaoDaConta extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/* ---------------- quadradinho vermelho com o número da mesa ---------------- */
+class _QuadroDaMesa extends StatelessWidget {
+  final String numero;
+  const _QuadroDaMesa({required this.numero});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 50),
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: T.redSuave,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: numero.isEmpty
+          ? Icon(Ico.mesa, size: 23, color: T.redDark)
+          : Text(numero,
+              maxLines: 1,
+              style: TextStyle(
+                  fontSize: numero.length > 2 ? 15 : 19,
+                  fontWeight: FontWeight.w800,
+                  color: T.redDark,
+                  letterSpacing: -.4)),
     );
   }
 }

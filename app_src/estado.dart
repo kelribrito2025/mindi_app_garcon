@@ -40,6 +40,23 @@ Future<void> salvarModoDeVer(bool lista) async {
   await p.setBool(_kModoLista, lista);
 }
 
+/// Na grade: 3 mesas por linha (padrão) ou 5, arrastando para o lado.
+/// Os cards continuam do mesmo tamanho; só cabe mais na linha.
+final cincoPorLinha = ValueNotifier<bool>(false);
+
+const _kCincoPorLinha = 'mesasCincoPorLinha';
+
+Future<void> carregarLarguraDaGrade() async {
+  final p = await SharedPreferences.getInstance();
+  cincoPorLinha.value = p.getBool(_kCincoPorLinha) ?? false;
+}
+
+Future<void> salvarLarguraDaGrade(bool cinco) async {
+  cincoPorLinha.value = cinco;
+  final p = await SharedPreferences.getInstance();
+  await p.setBool(_kCincoPorLinha, cinco);
+}
+
 /* ---------- "Lembrar-me" da tela de login ---------- */
 const _kLembrar = 'loginLembrar';
 const _kLoginEmail = 'loginEmail';

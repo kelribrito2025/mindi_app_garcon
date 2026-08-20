@@ -17,6 +17,7 @@ Future<void> main() async {
 
   // lê se ele prefere ver as mesas em grade ou em lista
   await carregarModoDeVer();
+  await carregarLarguraDaGrade();
 
   // lê o login salvo no celular antes de abrir a primeira tela
   await Sessao.carregar();
