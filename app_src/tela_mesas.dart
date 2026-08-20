@@ -171,53 +171,16 @@ class _TelaMesasState extends State<TelaMesas> {
             letterSpacing: -.2));
   }
 
-  /// cartão branco com a barra de ocupação e a legenda que filtra
+  /// cartão branco com os três filtros (ocupadas, conta, livres)
   Widget _resumo() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 11),
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       decoration: BoxDecoration(
         color: T.card,
         borderRadius: BorderRadius.circular(20),
         boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _barraOcupacao(),
-          const SizedBox(height: 10),
-          _legenda(),
-        ],
-      ),
-    );
-  }
-
-  Widget _barraOcupacao() {
-    final trilho = T.campo2;
-    if (_total == 0) {
-      return Container(
-        height: 9,
-        decoration: BoxDecoration(
-          color: trilho,
-          borderRadius: BorderRadius.circular(99),
-        ),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(99),
-      child: SizedBox(
-        height: 9,
-        child: Row(
-          children: [
-            if (_ocupadas > 0)
-              Expanded(flex: _ocupadas, child: Container(color: T.redDark)),
-            if (_pedindoConta > 0)
-              Expanded(
-                  flex: _pedindoConta, child: Container(color: T.amarelo)),
-            if (_livres > 0)
-              Expanded(flex: _livres, child: Container(color: trilho)),
-          ],
-        ),
-      ),
+      child: _legenda(),
     );
   }
 
