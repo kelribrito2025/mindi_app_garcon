@@ -401,6 +401,50 @@ class Api {
       _lista(await _enviar('GET', '$_raiz/complements'), 'complements');
 
   /* ================================================================ *
+   *  3.5 GANHOS DO GARÇOM (comissão da taxa de serviço)
+   *
+   *  ATENÇÃO: estes dois endpoints ainda NÃO existem no servidor.
+   *  Estão escritos aqui no formato combinado com o backend; a tela
+   *  já trata a falta deles sem quebrar. Quando subirem, funciona.
+   * ================================================================ */
+
+  /// GET /api/waiter/earnings?from=&to=
+  static Future<Map<String, dynamic>> ganhos({
+    required DateTime de,
+    required DateTime ate,
+  }) async =>
+      _mapa(await _enviar('GET', '$_raiz/earnings', query: {
+        'from': _inicioDoDia(de),
+        'to': _fimDoDia(ate),
+      }));
+
+  /// GET /api/waiter/history?from=&to= — as comandas que ELE fechou
+  static Future<List<Map<String, dynamic>>> minhasComandas({
+    required DateTime de,
+    required DateTime ate,
+  }) async =>
+      _lista(
+          await _enviar('GET', '$_raiz/history', query: {
+            'from': _inicioDoDia(de),
+            'to': _fimDoDia(ate),
+          }),
+          'history');
+
+  /* ---------------- datas ----------------
+     O servidor guarda tudo em UTC. Aqui vai o instante exato do começo
+     e do fim do dia NO HORÁRIO DO CELULAR, já convertido. Sem isso,
+     mesa fechada às 23h cai no dia seguinte. */
+
+  static String _inicioDoDia(DateTime d) =>
+      DateTime(d.year, d.month, d.day).toUtc().toIso8601String();
+
+  static String _fimDoDia(DateTime d) => DateTime(d.year, d.month, d.day)
+      .add(const Duration(days: 1))
+      .subtract(const Duration(seconds: 1))
+      .toUtc()
+      .toIso8601String();
+
+  /* ================================================================ *
    *  4. COMANDA
    * ================================================================ */
 

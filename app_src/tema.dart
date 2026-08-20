@@ -148,7 +148,7 @@ class BarraBoasVindas extends StatelessWidget {
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: clicavel ? () => abaSelecionada.value = 2 : null,
+            onTap: clicavel ? () => abaSelecionada.value = 3 : null,
             child: Row(
               children: [
                 Container(

@@ -25,6 +25,9 @@ DateTime? _data(dynamic v) =>
 
 String reais(double v) => 'R\$ ${v.toStringAsFixed(2).replaceAll('.', ',')}';
 
+/// versão curta, sem centavos — usada nos números pequenos da aba Ganhos
+String reaisCurto(double v) => 'R\$ ${v.toStringAsFixed(0)}';
+
 /// como o servidor manda dinheiro em texto ("15.50"), o app devolve
 /// no mesmo formato quando precisa enviar de volta
 String paraServidor(double v) => v.toStringAsFixed(2);
@@ -628,4 +631,62 @@ class ComandaFechada {
 
   int get totalDeItens =>
       itens.fold(0, (soma, i) => soma + i.quantidade);
+}
+
+/* ================================================================== *
+ *  COMANDA NO HISTÓRICO DE GANHOS DO GARÇOM
+ *  Vem de GET /api/waiter/history — uma mesa que ELE fechou.
+ * ================================================================== */
+class ComandaDoGarcom {
+  final int id;
+  final String mesa;
+  final String identificacao;
+  final double total;
+  final double comissao;
+  final bool comissaoPaga;
+  final DateTime? fechadaEm;
+
+  const ComandaDoGarcom({
+    required this.id,
+    this.mesa = '',
+    this.identificacao = '',
+    this.total = 0,
+    this.comissao = 0,
+    this.comissaoPaga = true,
+    this.fechadaEm,
+  });
+
+  factory ComandaDoGarcom.fromJson(Map<String, dynamic> j) => ComandaDoGarcom(
+        id: _int(j['id']),
+        // mesa junta manda displayNumber ("5-6"); mesa normal, tableNumber
+        mesa: (j['displayNumber'] ?? j['tableNumber'] ?? j['tabNumber'] ?? '')
+            .toString(),
+        identificacao: (j['label'] ?? '').toString(),
+        total: _num(j['total']),
+        // enquanto o servidor não mandar "commission", a taxa de serviço
+        // da comanda é a melhor aproximação
+        comissao: j['commission'] == null
+            ? _num(j['serviceCharge'])
+            : _num(j['commission']),
+        comissaoPaga: j['commissionPaid'] != false,
+        fechadaEm: _data(j['closedAt']),
+      );
+
+  String get titulo => mesa.isEmpty ? 'Mesa' : 'Mesa $mesa';
+
+  /// "16:45"
+  String get hora {
+    final d = fechadaEm;
+    if (d == null) return '';
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(d.hour)}:${dois(d.minute)}';
+  }
+
+  /// "19/08 às 16:45"
+  String get quando {
+    final d = fechadaEm;
+    if (d == null) return '';
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(d.day)}/${dois(d.month)} às ${dois(d.hour)}:${dois(d.minute)}';
+  }
 }
