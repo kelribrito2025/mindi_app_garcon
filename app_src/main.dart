@@ -5,6 +5,7 @@ import 'tema.dart';
 import 'sessao.dart';
 import 'estado.dart';
 import 'notificacoes.dart';
+import 'atualizacao.dart';
 import 'tela_login.dart';
 import 'app_shell.dart';
 
@@ -26,6 +27,10 @@ Future<void> main() async {
     // não usa await: o app abre na hora e o token vai em segundo plano
     Notificacoes.registrar();
   }
+
+  // procura correção pelo ar em segundo plano (sem await: não pode
+  // atrasar a abertura do app)
+  procurarAtualizacao();
 
   runApp(const MeuApp());
 }

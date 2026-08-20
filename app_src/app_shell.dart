@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'tema.dart';
 import 'estado.dart';
 import 'tab_bar_curva.dart';
+import 'atualizacao.dart';
 import 'tela_mesas.dart';
 import 'tela_config.dart';
 import 'tela_perfil.dart';
@@ -79,12 +80,19 @@ class _AppShellState extends State<AppShell> {
             left: kSide,
             right: kSide,
             bottom: margemInferior + 8,
-            child: ValueListenableBuilder<int>(
-              valueListenable: abaSelecionada,
-              builder: (_, aba, __) => TabBarCurva(
-                indice: aba,
-                aoTrocar: (i) => abaSelecionada.value = i,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // faixa "Atualização pronta" logo acima da barra de abas
+                const AvisoDeAtualizacao(),
+                ValueListenableBuilder<int>(
+                  valueListenable: abaSelecionada,
+                  builder: (_, aba, __) => TabBarCurva(
+                    indice: aba,
+                    aoTrocar: (i) => abaSelecionada.value = i,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
