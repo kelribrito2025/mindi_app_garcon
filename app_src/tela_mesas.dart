@@ -124,25 +124,28 @@ class _TelaMesasState extends State<TelaMesas> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // mesmo topo vermelho das abas Ajustes e Perfil
-            HeaderVermelho(child: BarraBoasVindas(direita: _contador())),
-            Transform.translate(
-              offset: const Offset(0, -44),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kSide),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // o resumo saiu do vermelho e virou um cartão branco
-                    _resumo(),
-                    const SizedBox(height: 14),
-                    // a fila sempre aparece: mesmo sem nenhum espaço
-                    // cadastrado, o botão "+" precisa estar ali
-                    _filtros(),
-                    const SizedBox(height: 14),
-                    _conteudo(),
-                  ],
-                ),
+            HeaderVermelho(
+              alturaExtra: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  BarraBoasVindas(direita: _contador()),
+                  const SizedBox(height: 12),
+                  _legenda(),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(kSide, 16, kSide, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // a fila sempre aparece: mesmo sem nenhum espaço
+                  // cadastrado, o botão "+" precisa estar ali
+                  _filtros(),
+                  const SizedBox(height: 14),
+                  _conteudo(),
+                ],
               ),
             ),
           ],
@@ -171,28 +174,15 @@ class _TelaMesasState extends State<TelaMesas> {
             letterSpacing: -.2));
   }
 
-  /// cartão branco com os três filtros (ocupadas, conta, livres)
-  Widget _resumo() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
-      decoration: BoxDecoration(
-        color: T.card,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
-      ),
-      child: _legenda(),
-    );
-  }
-
   /// tocar na legenda filtra a grade; tocar de novo mostra tudo
   Widget _legenda() {
     return Row(
       children: [
-        _pontinho(T.redDark, '$_ocupadas ocupadas', 'ocupada'),
+        _pontinho(Colors.white, '$_ocupadas ocupadas', 'ocupada'),
         const SizedBox(width: 8),
-        _pontinho(T.amarelo, '$_pedindoConta conta', 'conta'),
+        _pontinho(const Color(0xFFFCD34D), '$_pedindoConta conta', 'conta'),
         const SizedBox(width: 8),
-        _pontinho(T.green, '$_livres livres', 'livre'),
+        _pontinho(Colors.white.withOpacity(.45), '$_livres livres', 'livre'),
       ],
     );
   }
@@ -206,10 +196,12 @@ class _TelaMesasState extends State<TelaMesas> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
         decoration: BoxDecoration(
-          color: ligado ? T.campo : Colors.transparent,
+          color: ligado ? Colors.white.withOpacity(.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border:
-              Border.all(color: ligado ? T.borda : Colors.transparent),
+          border: Border.all(
+              color: ligado
+                  ? Colors.white.withOpacity(.35)
+                  : Colors.transparent),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -224,7 +216,7 @@ class _TelaMesasState extends State<TelaMesas> {
                 style: TextStyle(
                     fontSize: 12,
                     fontWeight: ligado ? FontWeight.w800 : FontWeight.w600,
-                    color: ligado ? T.ink : T.inkMedio)),
+                    color: Colors.white.withOpacity(ligado ? 1 : .92))),
           ],
         ),
       ),
