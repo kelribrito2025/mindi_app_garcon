@@ -238,6 +238,10 @@ class Mesa {
   int get itens => comanda?.itens ?? 0;
   int? get comandaId => comanda?.id;
 
+  /// quanto ainda falta pagar (total menos os pagamentos avulsos).
+  /// É o que o card mostra: depois de um pagamento avulso o valor cai.
+  double get falta => comanda?.falta ?? 0;
+
   /// Mesa aberta mas ainda sem nenhum item lançado.
   /// No card ela continua contando como livre — só vira ocupada
   /// depois que o garçom lança o primeiro item.

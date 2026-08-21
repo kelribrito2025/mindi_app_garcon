@@ -204,10 +204,6 @@ class _SheetLancarState extends State<_SheetLancar> {
     }
   }
 
-  Future<void> _historico() async {
-    await mostrarHistoricoDaMesa(context, mesa: widget.mesa);
-  }
-
   /* ---------------- tela ---------------- */
 
   @override
@@ -230,6 +226,17 @@ class _SheetLancarState extends State<_SheetLancar> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             _cabecalho(),
             const SizedBox(height: 14),
             _campoBusca(),
@@ -612,22 +619,6 @@ class _SheetLancarState extends State<_SheetLancar> {
     final podeEnviar = _carrinho.isNotEmpty && !_enviando;
     return Row(
       children: [
-        // só o ícone: o botão de enviar fica com o resto da largura
-        AfundaAoTocar(
-          onTap: _historico,
-          child: Container(
-            width: 52,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: T.campo,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: T.borda),
-            ),
-            child: Icon(Ico.historico, size: 18, color: T.inkMedio),
-          ),
-        ),
-        const SizedBox(width: 10),
         Expanded(
           flex: 2,
           child: AfundaAoTocar(

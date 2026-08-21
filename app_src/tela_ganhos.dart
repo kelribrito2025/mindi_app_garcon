@@ -7,6 +7,7 @@ import 'api.dart';
 import 'sessao.dart';
 import 'modelos.dart';
 import 'sheet_detalhe_ganho.dart';
+import 'tela_historico_ganhos.dart';
 
 /* ================================================================== *
  *  ABA GANHOS — a comissão do garçom
@@ -315,13 +316,28 @@ class _TelaGanhosState extends State<TelaGanhos> {
   Widget _tituloSecao() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
-      child: Text(
-          _periodo == 'Hoje' ? 'MESAS DE HOJE' : 'MESAS DO PERÍODO',
-          style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-              color: T.inkSoft)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+              _periodo == 'Hoje' ? 'MESAS DE HOJE' : 'MESAS DO PERÍODO',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: T.inkSoft)),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const TelaHistoricoGanhos())),
+            child: Text('Ver todas',
+                style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: T.redDark)),
+          ),
+        ],
+      ),
     );
   }
 

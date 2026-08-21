@@ -113,6 +113,17 @@ class _SheetParcialState extends State<_SheetParcial> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           CabecalhoDePagamento(
             mesa: widget.mesa,
             titulo: 'Fechar parcial',
@@ -377,6 +388,17 @@ class _SheetAvulsoState extends State<_SheetAvulso> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             CabecalhoDePagamento(
               mesa: widget.mesa,
               titulo: 'Pagamento avulso',

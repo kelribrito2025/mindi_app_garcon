@@ -109,6 +109,17 @@ class _SheetFecharState extends State<_SheetFechar> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             Row(
               children: [
                 _QuadroDaMesa(numero: widget.mesa),
@@ -340,6 +351,17 @@ Future<String?> mostrarOpcoesDaConta(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           Row(
             children: [
               _QuadroDaMesa(numero: mesa),

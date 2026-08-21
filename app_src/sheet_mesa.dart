@@ -8,6 +8,7 @@ import 'sheet_fechar.dart';
 import 'sheet_pagamentos.dart';
 import 'sheet_transferir.dart';
 import 'sheet_lancar_itens.dart';
+import 'sheets_pedido.dart';
 
 /* ================================================================== *
  *  MODAL DA MESA
@@ -50,9 +51,22 @@ class _SheetMesaState extends State<_SheetMesa> {
     super.initState();
     _pessoas = widget.mesa.pessoas > 0 ? widget.mesa.pessoas : 1;
     _carregar();
+    _conferirHistorico();
   }
 
   Mesa get _mesa => _detalhe ?? widget.mesa;
+
+  /// a mesa tem linha do tempo? (mostra ou esconde o botão de histórico)
+  bool _temHistorico = false;
+
+  Future<void> _conferirHistorico() async {
+    try {
+      final r = await Api.historicoDaMesa(widget.mesa.id);
+      if (mounted && r.isNotEmpty) setState(() => _temHistorico = true);
+    } catch (_) {
+      // sem histórico ou sem internet: o botão só não aparece
+    }
+  }
 
   Future<void> _carregar() async {
     if (!apiConfigurada) {
@@ -367,6 +381,17 @@ class _SheetMesaState extends State<_SheetMesa> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             _cabecalho(),
             const SizedBox(height: 16),
             // Flexible só faz sentido quando o conteúdo pode passar da
@@ -707,6 +732,17 @@ class _SheetMesaState extends State<_SheetMesa> {
         // os dois lado a lado: sobra espaço e cabe mais item na tela
         Row(
           children: [
+            if (_temHistorico) ...[
+              // linha do tempo da mesa: só aparece quando existe
+              _BotaoGrande(
+                texto: '',
+                icone: Ico.historico,
+                secundario: true,
+                carregando: false,
+                onTap: () => mostrarHistoricoDaMesa(context, mesa: _mesa),
+              ),
+              const SizedBox(width: 9),
+            ],
             Expanded(
               flex: temItens ? 3 : 1,
               child: _BotaoGrande(

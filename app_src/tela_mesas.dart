@@ -718,8 +718,8 @@ class _CardMesa extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       letterSpacing: .5,
                       color: cor)),
-            if (mesa.total > 0)
-              Text(reais(mesa.total),
+            if (mesa.falta > 0)
+              Text(reais(mesa.falta),
                   style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w800,
@@ -826,8 +826,8 @@ class _LinhaMesa extends StatelessWidget {
                 ],
               ),
             ),
-            if (mesa.total > 0)
-              Text(reais(mesa.total),
+            if (mesa.falta > 0)
+              Text(reais(mesa.falta),
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,

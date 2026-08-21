@@ -42,6 +42,17 @@ class _SheetDetalhe extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           Row(
             children: [
               Container(

@@ -110,30 +110,38 @@ class _TelaConfigState extends State<TelaConfig> {
                                 Icon(Ico.conta, size: 24, color: T.green),
                           ),
                           const SizedBox(width: 14),
+                          // duas linhas: nome + destino, e a % grande à direita
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('Taxa de serviço',
                                     style: TextStyle(
-                                        fontSize: 13, color: T.inkSoft)),
-                                const SizedBox(height: 2),
-                                Text(
-                                    taxa > 0
-                                        ? '${taxa.toStringAsFixed(taxa % 1 == 0 ? 0 : 1)}%'
-                                        : 'Não cobrada',
-                                    style: TextStyle(
-                                        fontSize: 21,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w800,
                                         color: T.ink,
-                                        letterSpacing: -.5)),
-                                if (taxa > 0 && _destinoTaxa.isNotEmpty)
+                                        height: 1.2)),
+                                if (taxa > 0 && _destinoTaxa.isNotEmpty) ...[
+                                  const SizedBox(height: 2),
                                   Text(_destinoTaxa,
                                       style: TextStyle(
-                                          fontSize: 12.5, color: T.inkSoft)),
+                                          fontSize: 12.5,
+                                          height: 1.25,
+                                          color: T.inkSoft)),
+                                ],
                               ],
                             ),
                           ),
+                          const SizedBox(width: 10),
+                          Text(
+                              taxa > 0
+                                  ? '${taxa.toStringAsFixed(taxa % 1 == 0 ? 0 : 1)}%'
+                                  : 'Não cobrada',
+                              style: TextStyle(
+                                  fontSize: taxa > 0 ? 22 : 14,
+                                  fontWeight: FontWeight.w800,
+                                  color: taxa > 0 ? T.green : T.inkSoft,
+                                  letterSpacing: -.5)),
                           if (_carregando)
                             SizedBox(
                               width: 16,
@@ -273,6 +281,17 @@ void _modalDeVisualizacao(BuildContext context) {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           Row(
             children: [
               Container(

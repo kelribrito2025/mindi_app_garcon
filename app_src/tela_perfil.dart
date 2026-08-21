@@ -8,6 +8,7 @@ import 'atualizacao.dart';
 import 'notificacoes.dart';
 import 'cardapio.dart';
 import 'tela_editar_perfil.dart';
+import 'tela_historico_ganhos.dart';
 import 'tela_login.dart';
 
 class TelaPerfil extends StatefulWidget {
@@ -227,6 +228,17 @@ class _TelaPerfilState extends State<TelaPerfil> {
                               builder: (_) => const TelaEditarPerfil()));
                           if (mounted) setState(() {});
                         },
+                      ),
+                      _Item(
+                        icone: Ico.historico,
+                        cor: T.green,
+                        fundo: T.greenSuave,
+                        titulo: 'Histórico de ganhos',
+                        sub: 'Todas as mesas que você fechou',
+                        onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const TelaHistoricoGanhos())),
                       ),
                     ]),
 

@@ -170,6 +170,17 @@ class _SheetGerenciarState extends State<_SheetGerenciar> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             _cabecalho(),
             const SizedBox(height: 18),
             Flexible(

@@ -82,6 +82,17 @@ class _SheetCriarMesasState extends State<_SheetCriarMesas> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             // ---------- cabeçalho ----------
             Row(
               children: [
@@ -100,7 +111,7 @@ class _SheetCriarMesasState extends State<_SheetCriarMesas> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Criar mesas',
+                      Text('Criar novo espaço',
                           style: TextStyle(
                               fontSize: 19,
                               fontWeight: FontWeight.w800,

@@ -167,6 +167,17 @@ class _SheetTransferirState extends State<_SheetTransferir> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           _cabecalho(),
           const SizedBox(height: 16),
           _tituloPequeno('ITENS PARA LEVAR', acao: _botaoMarcarTudo()),

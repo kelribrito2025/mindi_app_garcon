@@ -119,6 +119,17 @@ class _SheetItemState extends State<_SheetItem> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             _cabecalho(),
             const SizedBox(height: 14),
             Flexible(
@@ -673,6 +684,17 @@ Future<String?> mostrarIdentificacao(BuildContext context,
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
             Row(
               children: [
                 Container(
@@ -784,6 +806,17 @@ Future<String?> mostrarEnviarPedido(BuildContext context,
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           Row(
             children: [
               Container(
@@ -929,28 +962,95 @@ class _SheetHistorico extends StatefulWidget {
   State<_SheetHistorico> createState() => _SheetHistoricoState();
 }
 
+/// um acontecimento da linha do tempo da mesa
+class _Evento {
+  final String tipo;
+  final String descricao;
+  final String detalhe;
+  final double valor;
+  final DateTime? quando;
+
+  const _Evento({
+    required this.tipo,
+    this.descricao = '',
+    this.detalhe = '',
+    this.valor = 0,
+    this.quando,
+  });
+
+  factory _Evento.fromJson(Map<String, dynamic> j) => _Evento(
+        tipo: (j['type'] ?? '').toString(),
+        descricao: (j['description'] ?? '').toString(),
+        detalhe: (j['details'] ?? '').toString(),
+        valor: (() {
+          final v = j['amount'];
+          if (v is num) return v.toDouble();
+          return double.tryParse('$v'.replaceAll(',', '.')) ?? 0.0;
+        })(),
+        quando: j['timestamp'] is String
+            ? DateTime.tryParse(j['timestamp'] as String)?.toLocal()
+            : null,
+      );
+
+  String get hora {
+    final d = quando;
+    if (d == null) return '';
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(d.day)}/${dois(d.month)} ${dois(d.hour)}:${dois(d.minute)}';
+  }
+}
+
 class _SheetHistoricoState extends State<_SheetHistorico> {
-  List<ComandaFechada> _comandas = [];
+  List<_Evento> _eventos = [];
   bool _carregando = true;
   String? _erro;
 
   @override
   void initState() {
     super.initState();
-    _carregar();
+    _buscar();
   }
 
-  Future<void> _carregar() async {
+  Future<void> _buscar() async {
     try {
       final r = await Api.historicoDaMesa(widget.mesa.id);
       if (!mounted) return;
-      setState(() => _comandas = r.map(ComandaFechada.fromJson).toList());
+      setState(() {
+        _eventos = r.map(_Evento.fromJson).toList();
+        _carregando = false;
+      });
     } on ApiErro catch (e) {
-      if (mounted) setState(() => _erro = e.mensagem);
+      if (!mounted) return;
+      setState(() {
+        _erro = e.mensagem;
+        _carregando = false;
+      });
     } catch (_) {
-      if (mounted) setState(() => _erro = 'Não foi possível ver o histórico.');
-    } finally {
-      if (mounted) setState(() => _carregando = false);
+      if (!mounted) return;
+      setState(() {
+        _erro = 'Não foi possível carregar o histórico.';
+        _carregando = false;
+      });
+    }
+  }
+
+  (IconData, Color, Color) _visual(String tipo) {
+    switch (tipo) {
+      case 'item_added':
+        return (Ico.maisItem, T.green, T.greenSuave);
+      case 'item_cancelled':
+        return (Ico.lixeira, T.redDark, T.redSuave);
+      case 'partial_payment':
+      case 'loose_payment':
+        return (Ico.conta, T.green, T.greenSuave);
+      case 'order_sent':
+        return (Ico.cozinha, T.azul, T.azulSuave);
+      case 'table_opened':
+        return (Ico.mesa, T.azul, T.azulSuave);
+      case 'table_closed':
+        return (Ico.checkCirculo, T.inkMedio, T.campo);
+      default:
+        return (Ico.historico, T.inkSoft, T.campo);
     }
   }
 
@@ -960,7 +1060,7 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
     return Container(
       constraints: BoxConstraints(maxHeight: altura * .85),
       padding: EdgeInsets.fromLTRB(
-          18, 20, 18, 18 + MediaQuery.of(context).padding.bottom),
+          18, 20, 18, 16 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
         color: T.card,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -969,6 +1069,17 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Container(
+              width: 42,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: T.borda,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
           Row(
             children: [
               Container(
@@ -993,8 +1104,7 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
                             color: T.ink,
                             height: 1.15,
                             letterSpacing: -.4)),
-                    Text(
-                        'Mesa ${widget.mesa.titulo} · últimos 30 dias',
+                    Text('Mesa ${widget.mesa.titulo} · tudo que aconteceu',
                         style: TextStyle(
                             fontSize: 13, height: 1.25, color: T.inkSoft)),
                   ],
@@ -1028,20 +1138,20 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13.5, color: T.redDark)),
             )
-          else if (_comandas.isEmpty)
+          else if (_eventos.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 26),
               child: Column(
                 children: [
                   Icon(Ico.historico, size: 30, color: T.fraco),
                   const SizedBox(height: 10),
-                  Text('Nenhuma conta fechada aqui',
+                  Text('Nada por aqui ainda',
                       style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w700,
                           color: T.ink)),
                   const SizedBox(height: 4),
-                  Text('Esta mesa ainda não teve comanda fechada.',
+                  Text('Esta mesa ainda não teve movimento.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12.5, color: T.inkSoft)),
                 ],
@@ -1051,11 +1161,10 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
             Flexible(
               child: ListView.separated(
                 shrinkWrap: true,
-                primary: false,
                 padding: EdgeInsets.zero,
-                itemCount: _comandas.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 9),
-                itemBuilder: (_, i) => _cartao(_comandas[i]),
+                itemCount: _eventos.length,
+                separatorBuilder: (_, __) => Divider(color: T.line, height: 1),
+                itemBuilder: (_, i) => _linha(_eventos[i]),
               ),
             ),
         ],
@@ -1063,95 +1172,51 @@ class _SheetHistoricoState extends State<_SheetHistorico> {
     );
   }
 
-  Widget _cartao(ComandaFechada c) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: T.campo,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: T.borda),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _linha(_Evento e) {
+    final (icone, cor, fundo) = _visual(e.tipo);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(c.quando,
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            color: T.ink)),
-                    Text(
-                        [
-                          if (c.numero.isNotEmpty) c.numero,
-                          '${c.totalDeItens} '
-                              '${c.totalDeItens == 1 ? "item" : "itens"}',
-                          if (c.pagamento.isNotEmpty)
-                            formaPagamento(c.pagamento),
-                        ].join(' · '),
-                        style: TextStyle(fontSize: 12, color: T.inkSoft)),
-                  ],
-                ),
-              ),
-              Text(reais(c.total),
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: T.ink,
-                      letterSpacing: -.3)),
-            ],
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: fundo,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icone, size: 16, color: cor),
           ),
-          if (c.itens.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Divider(color: T.line, height: 1),
-            const SizedBox(height: 8),
-            ...c.itens.map((it) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 26,
-                        child: Text('${it.quantidade}x',
-                            style: TextStyle(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w800,
-                                color: T.inkSoft)),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(it.nome,
-                                style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: T.ink)),
-                            if (it.complementos.isNotEmpty)
-                              Text(it.complementos.join(', '),
-                                  style: TextStyle(
-                                      fontSize: 11.5, color: T.inkSoft)),
-                            if (it.observacao.isNotEmpty)
-                              Text(it.observacao,
-                                  style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontStyle: FontStyle.italic,
-                                      color: T.inkSoft)),
-                          ],
-                        ),
-                      ),
-                      Text(reais(it.precoTotal),
-                          style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: T.inkMedio)),
-                    ],
-                  ),
-                )),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(e.descricao.isEmpty ? e.tipo : e.descricao,
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: T.ink,
+                        height: 1.25)),
+                if (e.detalhe.isNotEmpty || e.hora.isNotEmpty)
+                  Text(
+                      [
+                        if (e.hora.isNotEmpty) e.hora,
+                        if (e.detalhe.isNotEmpty) e.detalhe,
+                      ].join(' · '),
+                      style: TextStyle(fontSize: 12, color: T.inkSoft)),
+              ],
+            ),
+          ),
+          if (e.valor > 0) ...[
+            const SizedBox(width: 8),
+            Text(reais(e.valor),
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: T.ink)),
           ],
         ],
       ),
