@@ -317,7 +317,7 @@ class _SheetSepararState extends State<_SheetSeparar> {
       if (!mounted) return;
       setState(() {
         _ocupado = false;
-        _erro = e.codigo == 'TABLE_NOT_MERGED'
+        _erro = e.codigo == 'TABLE_NOT_MERGED' || e.codigo == 'NOT_MERGED'
             ? 'Essa mesa já não estava junta.'
             : e.mensagem;
       });

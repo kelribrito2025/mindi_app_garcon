@@ -330,7 +330,7 @@ class _SheetMesaState extends State<_SheetMesa> {
     } on ApiErro catch (e) {
       if (!mounted) return;
       setState(() => _separando = false);
-      if (e.codigo == 'TABLE_NOT_MERGED') {
+      if (e.codigo == 'TABLE_NOT_MERGED' || e.codigo == 'NOT_MERGED') {
         _avisar('Essa mesa já não estava junta com outra.');
       } else if (e.codigo == 'TABLE_NOT_FOUND') {
         _avisar('Essa mesa não existe mais.');

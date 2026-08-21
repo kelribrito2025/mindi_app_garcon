@@ -70,7 +70,10 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       backgroundColor: T.bg,
-      body: Stack(
+      // o vigia procura correção quando o app volta para a frente
+      // e a cada 15 minutos com ele aberto
+      body: VigiaDeAtualizacao(
+        child: Stack(
         children: [
           // IndexedStack mantém o estado de cada tela ao trocar de aba
           ValueListenableBuilder<int>(
@@ -98,6 +101,7 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

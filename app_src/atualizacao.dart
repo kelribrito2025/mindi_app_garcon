@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,6 +67,47 @@ Future<void> procurarAtualizacao() async {
   }
 }
 
+/* ---------------- vigia: procura de novo de tempos em tempos ----------------
+   O garçom fica com o app aberto o turno inteiro. Sem isso, uma correção
+   publicada depois da abertura só seria notada no próximo arranque.     */
+class VigiaDeAtualizacao extends StatefulWidget {
+  final Widget child;
+  const VigiaDeAtualizacao({super.key, required this.child});
+
+  @override
+  State<VigiaDeAtualizacao> createState() => _VigiaDeAtualizacaoState();
+}
+
+class _VigiaDeAtualizacaoState extends State<VigiaDeAtualizacao>
+    with WidgetsBindingObserver {
+  Timer? _relogio;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // com o app aberto, confere a cada 15 minutos
+    _relogio = Timer.periodic(
+        const Duration(minutes: 15), (_) => procurarAtualizacao());
+  }
+
+  @override
+  void dispose() {
+    _relogio?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState estado) {
+    // voltou para a frente (trocou de app e voltou): confere na hora
+    if (estado == AppLifecycleState.resumed) procurarAtualizacao();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 /* ---------------- a faixa que aparece na tela ---------------- */
 class AvisoDeAtualizacao extends StatelessWidget {
   const AvisoDeAtualizacao({super.key});
@@ -109,8 +152,11 @@ class AvisoDeAtualizacao extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 AfundaAoTocar(
-                  // fecha o app: ao abrir de novo a correção já está valendo
-                  onTap: () => SystemNavigator.pop(),
+                  // encerra o processo DE VERDADE: o SystemNavigator.pop
+                  // só esconde o app e o Android o mantém vivo — ao voltar,
+                  // a correção não entrava. Com exit(0) o próximo toque no
+                  // ícone abre o app do zero, já corrigido.
+                  onTap: () => exit(0),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
