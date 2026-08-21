@@ -655,17 +655,22 @@ class _CardMesa extends StatelessWidget {
                   ),
                   child: Text(
                       mesa.principalDoGrupo
-                          ? mesa.tituloDoGrupo
+                          ? mesa.tituloDoGrupoCurto
                           : mesa.titulo,
                       maxLines: 1,
+                      overflow: TextOverflow.clip,
                       style: TextStyle(
-                          fontSize: mesa.principalDoGrupo ? 13 : 15,
+                          fontSize: mesa.quantasNoGrupo >= 3
+                              ? 11.5
+                              : (mesa.principalDoGrupo ? 13 : 15),
                           fontWeight: FontWeight.w800,
                           color: cor,
                           letterSpacing: -.3)),
                 ),
                 const Spacer(),
-                if (mesa.pessoas > 0)
+                // com 3 mesas ou mais o número do grupo já ocupa a linha:
+                // o contador de pessoas sai para não espremer tudo
+                if (mesa.pessoas > 0 && mesa.quantasNoGrupo < 3)
                   Row(
                     children: [
                       Icon(Ico.pessoas, size: 12, color: T.inkSoft),
@@ -787,10 +792,14 @@ class _LinhaMesa extends StatelessWidget {
                 borderRadius: BorderRadius.circular(13),
               ),
               child: Text(
-                  mesa.principalDoGrupo ? mesa.tituloDoGrupo : mesa.titulo,
+                  mesa.principalDoGrupo
+                      ? mesa.tituloDoGrupoCurto
+                      : mesa.titulo,
                   maxLines: 1,
                   style: TextStyle(
-                      fontSize: mesa.principalDoGrupo ? 14 : 17,
+                      fontSize: mesa.quantasNoGrupo >= 3
+                          ? 12.5
+                          : (mesa.principalDoGrupo ? 14 : 17),
                       fontWeight: FontWeight.w800,
                       color: cor,
                       letterSpacing: -.3)),

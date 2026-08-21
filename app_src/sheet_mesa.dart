@@ -116,16 +116,32 @@ class _SheetMesaState extends State<_SheetMesa> {
   }
 
   Future<void> _lancarItens() async {
-    final comanda = _comanda;
-    if (comanda == null || comanda.id == 0) {
-      _avisar('Comanda ainda não carregou. Tente de novo.');
+    // primeiro: o que já está carregado
+    var id = _comanda?.id ?? 0;
+
+    // depois: o id que veio na lista de mesas — mesa junta às vezes
+    // só traz a comanda por ali
+    if (id == 0) id = _mesa.comandaId ?? 0;
+
+    // por último: busca a mesa de novo no servidor
+    if (id == 0) {
+      await _carregar();
+      if (!mounted) return;
+      id = _comanda?.id ?? 0;
+    }
+
+    if (id == 0) {
+      // o aviso de rodapé fica escondido atrás do modal: mostra no corpo
+      setState(() => _erro =
+          'Não achei a comanda desta mesa. Feche e abra a mesa de novo.');
       return;
     }
+
     final enviou = await mostrarLancarItens(
       context,
       mesa: _mesa,
-      comandaId: comanda.id,
-      totalAtual: comanda.total,
+      comandaId: id,
+      totalAtual: _comanda?.total ?? _mesa.total,
     );
     if (enviou == true && mounted) {
       _mudou = true;

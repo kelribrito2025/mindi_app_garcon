@@ -168,13 +168,21 @@ class _SheetLancarState extends State<_SheetLancar> {
         }
       } else if (escolha == 'imprimir') {
         try {
-          await Api.imprimirComanda(widget.comandaId);
+          final imprimiu = await Api.imprimirComanda(widget.comandaId);
+          if (!imprimiu && mounted) {
+            _avisar('Itens enviados, mas a impressão foi pulada. '
+                'Use "Reimprimir comanda" se precisar do papel.');
+          }
         } on ApiErro catch (e) {
           // os itens já estão na comanda; só a impressão falhou
           if (mounted) {
-            _avisar(e.codigo == 'PRINTER_OFFLINE'
-                ? 'Itens enviados, mas a impressora não respondeu.'
-                : 'Itens enviados, mas não imprimiu: ${e.mensagem}');
+            if (e.codigo == 'PRINTER_OFFLINE') {
+              _avisar('Itens enviados, mas a impressora não respondeu.');
+            } else if (e.codigo == 'NO_PRINTABLE_ITEMS') {
+              _avisar('Itens enviados. Nenhum deles precisa de impressão.');
+            } else {
+              _avisar('Itens enviados, mas não imprimiu: ${e.mensagem}');
+            }
           }
         }
       }

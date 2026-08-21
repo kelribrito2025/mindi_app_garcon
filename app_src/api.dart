@@ -597,10 +597,14 @@ class Api {
   /// POST /api/waiter/tabs/:id/print
   /// Sem parâmetro sai só o que foi lançado agora.
   /// Com [tudo] sai a comanda inteira (papel rasgou, cozinha perdeu).
-  static Future<void> imprimirComanda(int comandaId, {bool tudo = false}) =>
-      _enviar('POST', '$_raiz/tabs/$comandaId/print',
-          corpo: tudo ? {'all': true} : null,
-          chaveUnica: novaChaveUnica());
+  /// Devolve true quando o papel saiu; false quando o servidor pulou
+  /// a impressão (skipped) — aí o garçom precisa usar o Reimprimir.
+  static Future<bool> imprimirComanda(int comandaId, {bool tudo = false}) async {
+    final r = await _enviar('POST', '$_raiz/tabs/$comandaId/print',
+        corpo: tudo ? {'all': true} : null, chaveUnica: novaChaveUnica());
+    if (r is Map && r['skipped'] == true) return false;
+    return true;
+  }
 
   /// GET /api/waiter/tables/:id/history — pedidos já feitos nesta mesa
   static Future<List<Map<String, dynamic>>> historicoDaMesa(int id) async =>

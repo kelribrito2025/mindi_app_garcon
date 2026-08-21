@@ -45,6 +45,10 @@ class _SheetTransferirState extends State<_SheetTransferir> {
   bool _ocupado = false;
   String? _erro;
 
+  /// depois de transferir: o que o servidor respondeu
+  int? _movidos;
+  bool _origemFechou = false;
+
   @override
   void initState() {
     super.initState();
@@ -71,6 +75,12 @@ class _SheetTransferirState extends State<_SheetTransferir> {
     }
   }
 
+  int _int(dynamic v) {
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse('$v') ?? 0;
+  }
+
   double get _valorEscolhido => widget.itens
       .where((i) => _escolhidos.contains(i.id))
       .fold(0.0, (soma, i) => soma + i.precoTotal);
@@ -93,8 +103,24 @@ class _SheetTransferirState extends State<_SheetTransferir> {
         itens: _escolhidos.toList(),
         levarIdentificacao: _levarIdentificacao,
       );
-      // o servidor diz se a mesa de origem ficou vazia e fechou
-      if (mounted) Navigator.of(context).pop(r['sourceEmpty'] == true);
+      if (!mounted) return;
+
+      final quantos = _int(r['movedCount']);
+      if (quantos == 0) {
+        // aceitou mas nao moveu nada: mostra em vez de fechar calado
+        setState(() {
+          _ocupado = false;
+          _erro = 'O servidor aceitou mas não moveu nenhum item. '
+              'Confira no painel antes de tentar de novo.';
+        });
+        return;
+      }
+
+      setState(() {
+        _ocupado = false;
+        _movidos = quantos;
+        _origemFechou = r['sourceEmpty'] == true;
+      });
     } on ApiErro catch (e) {
       if (!mounted) return;
       setState(() {
@@ -135,7 +161,9 @@ class _SheetTransferirState extends State<_SheetTransferir> {
         color: T.card,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      child: Column(
+      child: _movidos != null
+          ? _confirmacao()
+          : Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -201,6 +229,71 @@ class _SheetTransferirState extends State<_SheetTransferir> {
     final n = _escolhidos.length;
     return 'Transferir $n ${n == 1 ? "item" : "itens"} '
         '· ${reais(_valorEscolhido)}';
+  }
+
+  /* ---------------- confirmação ---------------- */
+  Widget _confirmacao() {
+    final destino = _destino;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 6),
+        Center(
+          child: Container(
+            width: 64,
+            height: 64,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: T.greenSuave,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Ico.check, size: 30, color: T.green),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+            '$_movidos ${_movidos == 1 ? "item transferido" : "itens transferidos"}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                color: T.ink,
+                letterSpacing: -.4)),
+        const SizedBox(height: 4),
+        Text(
+            'Da mesa ${widget.origem.titulo} para a mesa '
+            '${destino == null ? "" : destino.titulo}',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.5, height: 1.3, color: T.inkSoft)),
+        if (_origemFechou)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+                'A mesa ${widget.origem.titulo} ficou sem itens e voltou '
+                'a ficar livre.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12.5, color: T.inkSoft)),
+          ),
+        const SizedBox(height: 20),
+        AfundaAoTocar(
+          onTap: () => Navigator.of(context).pop(_origemFechou),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              gradient: kGradRed,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text('Pronto',
+                style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
+          ),
+        ),
+      ],
+    );
   }
 
   /* ---------------- pedaços ---------------- */

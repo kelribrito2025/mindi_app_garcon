@@ -261,6 +261,21 @@ class Mesa {
           ? '$numero-${mesasJuntadas.join("-")}'
           : numero.toString());
 
+  /// quantas mesas o grupo tem (contando a principal)
+  int get quantasNoGrupo {
+    if (mostrarNumero.isNotEmpty) return mostrarNumero.split('-').length;
+    return principalDoGrupo ? 1 + mesasJuntadas.length : 1;
+  }
+
+  /// Versão curta para caber no card: até 4 mesas mostra todas,
+  /// daí em diante mostra 3 e um "+N". Sem isso o texto vaza do card.
+  String get tituloDoGrupoCurto {
+    final partes = tituloDoGrupo.split('-');
+    if (partes.length <= 4) return tituloDoGrupo;
+    final sobra = partes.length - 3;
+    return '${partes.take(3).join('-')} +$sobra';
+  }
+
   /// É isso que manda na cor do card e nos contadores.
   bool get pareceLivre => livre || semConsumo;
 

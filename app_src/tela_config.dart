@@ -549,9 +549,15 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
       if (!mounted) return;
       setState(() {
         _testando = false;
-        _recado = e.codigo == 'PRINTER_OFFLINE'
-            ? 'A impressora não respondeu. Veja se está ligada e com papel.'
-            : e.mensagem;
+        if (e.codigo == 'PRINTER_OFFLINE') {
+          _recado = 'A impressora não respondeu. '
+              'Veja se está ligada e com papel.';
+        } else if (e.codigo == 'NO_PRINTABLE_ITEMS') {
+          _recado = 'Nada para imprimir: os itens estão marcados '
+              'como "não imprimir".';
+        } else {
+          _recado = e.mensagem;
+        }
       });
     } catch (_) {
       if (!mounted) return;
