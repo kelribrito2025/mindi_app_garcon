@@ -56,6 +56,88 @@ class _SheetMesaState extends State<_SheetMesa> {
 
   Mesa get _mesa => _detalhe ?? widget.mesa;
 
+  /// o botão de três pontinhos aparece quando existe pelo menos uma opção
+  bool get _temMaisOpcoes {
+    final temItens =
+        _comanda?.itens.where((i) => !i.cancelado).isNotEmpty ?? false;
+    return _temHistorico || temItens || _mesa.principalDoGrupo;
+  }
+
+  /// modal com as ações que não cabem na linha de botões
+  Future<void> _maisOpcoes() async {
+    final temItens =
+        _comanda?.itens.where((i) => !i.cancelado).isNotEmpty ?? false;
+
+    final escolha = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(.55),
+      builder: (ctx) => Container(
+        padding: EdgeInsets.fromLTRB(
+            18, 14, 18, 18 + MediaQuery.of(ctx).padding.bottom),
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: T.borda,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            if (_temHistorico)
+              _OpcaoDaMesa(
+                icone: Ico.historico,
+                cor: T.azul,
+                fundo: T.azulSuave,
+                titulo: 'Histórico da mesa',
+                texto: 'Tudo que aconteceu nesta mesa',
+                onTap: () => Navigator.of(ctx).pop('historico'),
+              ),
+            if (temItens)
+              _OpcaoDaMesa(
+                icone: Ico.transferir,
+                cor: T.green,
+                fundo: T.greenSuave,
+                titulo: 'Transferir itens',
+                texto: 'Leva itens desta mesa para outra',
+                onTap: () => Navigator.of(ctx).pop('transferir'),
+              ),
+            if (_mesa.principalDoGrupo)
+              _OpcaoDaMesa(
+                icone: Ico.separar,
+                cor: T.redDark,
+                fundo: T.redSuave,
+                titulo: 'Separar mesas',
+                texto: 'Desfaz a junção deste grupo',
+                onTap: () => Navigator.of(ctx).pop('separar'),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (escolha == null || !mounted) return;
+
+    if (escolha == 'historico') {
+      await mostrarHistoricoDaMesa(context, mesa: _mesa);
+    } else if (escolha == 'transferir') {
+      await _transferir();
+    } else if (escolha == 'separar') {
+      await _separar();
+    }
+  }
+
   /// a mesa tem linha do tempo? (mostra ou esconde o botão de histórico)
   bool _temHistorico = false;
 
@@ -729,20 +811,9 @@ class _SheetMesaState extends State<_SheetMesa> {
 
     return Column(
       children: [
-        // os dois lado a lado: sobra espaço e cabe mais item na tela
+        // Lançar itens + Conta + três pontinhos (mais opções)
         Row(
           children: [
-            if (_temHistorico) ...[
-              // linha do tempo da mesa: só aparece quando existe
-              _BotaoGrande(
-                texto: '',
-                icone: Ico.historico,
-                secundario: true,
-                carregando: false,
-                onTap: () => mostrarHistoricoDaMesa(context, mesa: _mesa),
-              ),
-              const SizedBox(width: 9),
-            ],
             Expanded(
               flex: temItens ? 3 : 1,
               child: _BotaoGrande(
@@ -766,28 +837,20 @@ class _SheetMesaState extends State<_SheetMesa> {
                   onTap: _ocupado ? null : _abrirOpcoesDaConta,
                 ),
               ),
+            ],
+            if (_temMaisOpcoes) ...[
               const SizedBox(width: 9),
-              // só o ícone: leva itens desta mesa para outra
               _BotaoGrande(
                 texto: '',
-                icone: Ico.transferir,
+                icone: Ico.maisOpcoes,
                 secundario: true,
                 carregando: false,
-                onTap: _ocupado ? null : _transferir,
+                onTap: _ocupado ? null : _maisOpcoes,
               ),
             ],
           ],
         ),
-        if (_mesa.principalDoGrupo) ...[
-          const SizedBox(height: 9),
-          _BotaoGrande(
-            texto: 'Separar mesas',
-            icone: Ico.separar,
-            secundario: true,
-            carregando: _separando,
-            onTap: _ocupado ? null : _separar,
-          ),
-        ],
+
       ],
     );
   }
@@ -859,6 +922,75 @@ class _BotaoGrande extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------------- uma opção do menu de três pontinhos ---------------- */
+class _OpcaoDaMesa extends StatelessWidget {
+  final IconData icone;
+  final Color cor, fundo;
+  final String titulo, texto;
+  final VoidCallback onTap;
+  const _OpcaoDaMesa({
+    required this.icone,
+    required this.cor,
+    required this.fundo,
+    required this.titulo,
+    required this.texto,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: AfundaAoTocar(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: T.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: T.borda),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: fundo,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icone, size: 21, color: cor),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(titulo,
+                        style: TextStyle(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w800,
+                            color: T.ink,
+                            height: 1.2)),
+                    const SizedBox(height: 2),
+                    Text(texto,
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.25,
+                            color: T.inkSoft)),
+                  ],
+                ),
+              ),
+              Icon(Ico.avancar, size: 19, color: T.fraco),
+            ],
+          ),
         ),
       ),
     );

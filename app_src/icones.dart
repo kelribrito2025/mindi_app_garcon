@@ -85,6 +85,8 @@ class Ico {
   static const IconData separar = LucideIcons.unlink;
   // transferir itens de uma mesa para outra
   static const IconData transferir = LucideIcons.arrowLeftRight;
+  // menu de mais opcoes da mesa (3 pontinhos)
+  static const IconData maisOpcoes = LucideIcons.moreVertical;
   static const IconData busca = LucideIcons.search;
   static const IconData impressora = LucideIcons.printer;
   static const IconData sino = LucideIcons.bell;
