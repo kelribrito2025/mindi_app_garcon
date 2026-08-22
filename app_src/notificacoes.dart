@@ -46,6 +46,22 @@ final _canalAvisos = AndroidNotificationChannel(
   playSound: true,
 );
 
+/// vibração da CHAMADA de mesa: mais insistente que a do salão
+final _padraoVibraChamada =
+    Int64List.fromList([0, 800, 200, 800, 200, 800, 200, 1000]);
+
+/// canal das chamadas "cliente pediu o garçom" (o servidor envia
+/// os avisos de chamada neste canal: table_calls)
+final _canalChamadas = AndroidNotificationChannel(
+  'table_calls',
+  'Chamadas de mesa',
+  description: 'Cliente chamando o garçom pela mesa',
+  importance: Importance.max,
+  enableVibration: true,
+  vibrationPattern: _padraoVibraChamada,
+  playSound: true,
+);
+
 final _avisosLocais = FlutterLocalNotificationsPlugin();
 
 /// Precisa ser função de topo e ter o @pragma, senão o Android
@@ -88,8 +104,10 @@ bool get _appNaFrente =>
 class Notificacoes {
   static bool _pronto = false;
 
-  /// último aviso já mostrado (evita aviso repetido)
-  static int? _ultimoAvisado;
+  /// último aviso já mostrado (evita aviso repetido; guarda
+  /// "tipo:mesa" para uma chamada não ser engolida por um aviso
+  /// de pedido da mesma mesa)
+  static String? _ultimoAvisado;
   static DateTime? _horaDoUltimoAviso;
   static String? _ultimoToken;
   static bool _ouvindoRefresh = false;
@@ -143,6 +161,7 @@ class Notificacoes {
       final android = _avisosLocais.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
       await android?.createNotificationChannel(_canalAvisos);
+      await android?.createNotificationChannel(_canalChamadas);
 
       // app estava FECHADO e o garçom tocou no aviso do app
       final abriuPorAviso =
@@ -162,42 +181,54 @@ class Notificacoes {
       final aviso = mensagem.notification;
       final dados = mensagem.data;
 
-      // mesma mesa avisada há pouco: não repete
+      // chamada de mesa (cliente pediu o garçom) usa canal próprio
+      final ehChamada = '${dados['type'] ?? ''}' == 'table_call';
+
+      // mesma mesa avisada há pouco (do mesmo tipo): não repete
       final numero = _numeroDaMesa(dados['tableId']);
+      final chave = '${ehChamada ? 'chamada' : 'aviso'}:$numero';
       final agora = DateTime.now();
       if (numero != null &&
-          numero == _ultimoAvisado &&
+          chave == _ultimoAvisado &&
           _horaDoUltimoAviso != null &&
           agora.difference(_horaDoUltimoAviso!).inSeconds < 60) {
         return;
       }
-      _ultimoAvisado = numero;
+      _ultimoAvisado = chave;
       _horaDoUltimoAviso = agora;
 
       var titulo = aviso?.title ?? '';
       if (titulo.isEmpty) titulo = '${dados['title'] ?? ''}';
-      if (titulo.isEmpty) titulo = 'Aviso do salão';
+      if (titulo.isEmpty) {
+        titulo = ehChamada ? 'Mesa chamando!' : 'Aviso do salão';
+      }
 
       var texto = aviso?.body ?? '';
       if (texto.isEmpty) texto = '${dados['body'] ?? ''}';
-      if (texto.isEmpty) texto = 'Toque para abrir a mesa.';
+      if (texto.isEmpty) {
+        texto = ehChamada
+            ? 'Toque para abrir a mesa e atender o cliente.'
+            : 'Toque para abrir a mesa.';
+      }
 
+      final canal = ehChamada ? _canalChamadas : _canalAvisos;
       await _avisosLocais.show(
-        // id fixo: um aviso novo substitui o anterior
-        1001,
+        // ids separados: uma chamada não apaga um aviso de pedido
+        ehChamada ? 1002 : 1001,
         titulo,
         texto,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            _canalAvisos.id,
-            _canalAvisos.name,
-            channelDescription: _canalAvisos.description,
+            canal.id,
+            canal.name,
+            channelDescription: canal.description,
             importance: Importance.max,
             priority: Priority.high,
             enableVibration: true,
-            vibrationPattern: _padraoVibra,
+            vibrationPattern:
+                ehChamada ? _padraoVibraChamada : _padraoVibra,
             playSound: true,
-            ticker: 'Salão',
+            ticker: ehChamada ? 'Chamada de mesa' : 'Salão',
             visibility: NotificationVisibility.public,
           ),
         ),
