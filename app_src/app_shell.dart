@@ -5,6 +5,7 @@ import 'tab_bar_curva.dart';
 import 'atualizacao.dart';
 import 'tela_mesas.dart';
 import 'tela_ganhos.dart';
+import 'tela_alertas.dart';
 import 'tela_config.dart';
 import 'tela_perfil.dart';
 import 'tela_login.dart';
@@ -27,6 +28,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   final List<Widget> _telas = const [
     TelaMesas(),
+    TelaAlertas(),
     TelaGanhos(),
     TelaConfig(),
     TelaPerfil(),

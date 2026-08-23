@@ -106,3 +106,13 @@ final mesaDaNotificacao = ValueNotifier<int?>(null);
 /// Sobe +1 toda vez que chega uma notificação (pedido pronto, conta
 /// solicitada). Serve para as telas buscarem na hora, sem esperar os 15s.
 final avisoDeNovidade = ValueNotifier<int>(0);
+
+/* ---------- chamadas de garçom (aba Alertas) ---------- */
+
+/// as chamadas em aberto ("mesa X está chamando"), vindas do servidor.
+/// A aba Alertas mantém esta lista; a aba Mesas e a barra de abas
+/// só escutam.
+final chamadasAtivas = ValueNotifier<List<Map<String, dynamic>>>([]);
+
+/// sobe +1 quando chega o push de chamada — a aba Alertas busca na hora
+final avisoDeChamada = ValueNotifier<int>(0);

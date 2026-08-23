@@ -133,10 +133,21 @@ class Notificacoes {
       // app ABERTO na tela: o Android não mostra nada sozinho, então o
       // app desenha o aviso (com som e vibração) e atualiza a lista
       FirebaseMessaging.onMessage.listen((mensagem) async {
-        // Só desenha o aviso se o app estiver mesmo na frente do
-        // garçom. Fora isso quem desenha é o Android, e desenhar
-        // aqui também faria a notificação aparecer duas vezes.
-        if (_appNaFrente) _mostrarAviso(mensagem);
+        final ehChamada =
+            '${mensagem.data['type'] ?? ''}' == 'table_call';
+
+        if (ehChamada) {
+          // chamada de mesa com o app ABERTO: nada cobre a tela do
+          // garçom — o celular vibra e o aviso vai para a aba
+          // Alertas (bolinha na barra de abas)
+          alertarPedidoNovo(forcar: true);
+          avisoDeChamada.value = avisoDeChamada.value + 1;
+        } else if (_appNaFrente) {
+          // Só desenha o aviso se o app estiver mesmo na frente do
+          // garçom. Fora isso quem desenha é o Android, e desenhar
+          // aqui também faria a notificação aparecer duas vezes.
+          _mostrarAviso(mensagem);
+        }
 
         avisoDeNovidade.value = avisoDeNovidade.value + 1;
       });

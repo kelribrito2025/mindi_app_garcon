@@ -37,7 +37,7 @@ class _TelaConfigState extends State<TelaConfig> {
   }
 
   void _aoTrocarAba() {
-    if (abaSelecionada.value == 2 && mounted) _carregar();
+    if (abaSelecionada.value == 3 && mounted) _carregar();
   }
 
   Future<void> _carregar() async {

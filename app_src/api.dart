@@ -316,6 +316,52 @@ class Api {
       _enviar('PUT', '$_raiz/me/push-token', corpo: {'token': token});
 
   /* ================================================================ *
+   *  CHAMADAS DE GARÇOM — cliente tocou em "Chamar garçom" na mesa
+   * ================================================================ */
+
+  static List<Map<String, dynamic>> _listaDeChamadas(dynamic r) {
+    final lista = (r is Map) ? r['calls'] : r;
+    if (lista is List) {
+      return lista
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .toList();
+    }
+    return [];
+  }
+
+  /// chamadas em aberto: pendentes + as que alguém já disse "estou
+  /// indo" (elas continuam na lista até alguém tocar em Atendido)
+  static Future<List<Map<String, dynamic>>> chamadasEmAberto() async {
+    final pendentes = _listaDeChamadas(
+        await _enviar('GET', '$_raiz/calls', query: {'status': 'pending'}));
+    var assumidas = <Map<String, dynamic>>[];
+    try {
+      assumidas = _listaDeChamadas(await _enviar('GET', '$_raiz/calls',
+          query: {'status': 'acknowledged'}));
+    } catch (_) {
+      // servidor sem esse filtro: segue só com as pendentes
+    }
+    final vistas = <int>{};
+    final todas = <Map<String, dynamic>>[];
+    for (final c in [...pendentes, ...assumidas]) {
+      final id = (c['id'] is num) ? (c['id'] as num).toInt() : null;
+      if (id == null || vistas.contains(id)) continue;
+      vistas.add(id);
+      todas.add(c);
+    }
+    return todas;
+  }
+
+  /// "Estou indo" — avisa a equipe que alguém assumiu
+  static Future<void> assumirChamada(int id) =>
+      _enviar('POST', '$_raiz/calls/$id/acknowledge');
+
+  /// "Atendido" — encerra a chamada (some para todos)
+  static Future<void> concluirChamada(int id) =>
+      _enviar('POST', '$_raiz/calls/$id/resolve');
+
+  /* ================================================================ *
    *  2. MESAS
    * ================================================================ */
 

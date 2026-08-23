@@ -45,13 +45,48 @@ class _TelaMesasState extends State<TelaMesas> {
     // o mapa se atualiza sozinho a cada 15 segundos
     _relogio = Timer.periodic(const Duration(seconds: 15), (_) => _atualizar());
     avisoDeNovidade.addListener(_aoChegarAviso);
+    // as mesas que estão chamando o garçom acendem na grade
+    chamadasAtivas.addListener(_aoMudarChamadas);
   }
 
   @override
   void dispose() {
     _relogio?.cancel();
     avisoDeNovidade.removeListener(_aoChegarAviso);
+    chamadasAtivas.removeListener(_aoMudarChamadas);
     super.dispose();
+  }
+
+  void _aoMudarChamadas() {
+    if (mounted) setState(() {});
+  }
+
+  /// ids das mesas com chamada em aberto
+  Set<int> get _mesasChamando => {
+        for (final c in chamadasAtivas.value)
+          if (c['tableId'] is num) (c['tableId'] as num).toInt()
+      };
+
+  /// abriu a mesa que estava chamando: a chamada é dada como atendida
+  /// (o CHAMANDO some para todos os garçons)
+  void _resolverChamadaDaMesa(Mesa m) {
+    final lista = chamadasAtivas.value;
+    final daMesa = lista
+        .where((c) =>
+            c['tableId'] is num && (c['tableId'] as num).toInt() == m.id)
+        .toList();
+    if (daMesa.isEmpty) return;
+
+    chamadasAtivas.value = [
+      for (final c in lista)
+        if (!daMesa.contains(c)) c
+    ];
+    for (final c in daMesa) {
+      final id = (c['id'] as num?)?.toInt();
+      if (id != null) {
+        Api.concluirChamada(id).catchError((_) {});
+      }
+    }
   }
 
   void _aoChegarAviso() {
@@ -392,6 +427,7 @@ class _TelaMesasState extends State<TelaMesas> {
         _visiveis[i],
         _CardMesa(
           mesa: _visiveis[i],
+          chamando: _mesasChamando.contains(_visiveis[i].id),
           onTap: () => _abrirMesa(_visiveis[i]),
         ),
       ),
@@ -426,6 +462,7 @@ class _TelaMesasState extends State<TelaMesas> {
         _visiveis[i],
         _LinhaMesa(
           mesa: _visiveis[i],
+          chamando: _mesasChamando.contains(_visiveis[i].id),
           onTap: () => _abrirMesa(_visiveis[i]),
         ),
       ),
@@ -573,6 +610,8 @@ class _TelaMesasState extends State<TelaMesas> {
       );
 
   Future<void> _abrirMesa(Mesa m) async {
+    // mesa chamando: abrir já conta como atendida
+    _resolverChamadaDaMesa(m);
     // mesa encostada em outra não tem comanda própria: abre a principal
     var alvo = m;
     if (m.secundariaDoGrupo) {
@@ -588,7 +627,11 @@ class _TelaMesasState extends State<TelaMesas> {
 class _CardMesa extends StatelessWidget {
   final Mesa mesa;
   final VoidCallback onTap;
-  const _CardMesa({required this.mesa, required this.onTap});
+
+  /// o cliente tocou em "Chamar garçom" nesta mesa
+  final bool chamando;
+  const _CardMesa(
+      {required this.mesa, required this.onTap, this.chamando = false});
 
   /// linha de baixo do card: quem está na mesa ou há quanto tempo
   String get _legenda {
@@ -626,107 +669,191 @@ class _CardMesa extends StatelessWidget {
       rotulo = mesa.semConsumo ? 'ABERTA' : 'LIVRE';
     }
 
-    return AfundaAoTocar(
-      onTap: onTap,
-      escala: .96,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: T.card,
-          borderRadius: BorderRadius.circular(18),
-          border:
-              Border.all(color: mesa.pareceLivre ? T.borda : cor, width: 1.4),
-          boxShadow: sombraCard(),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    Widget cartao = Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: chamando ? T.redSuave : T.card,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+            color: chamando
+                ? T.redDark
+                : (mesa.pareceLivre ? T.borda : cor),
+            width: 1.4),
+        boxShadow: sombraCard(),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // o quadradinho colorido agora carrega o número da mesa
+              Container(
+                constraints: const BoxConstraints(minWidth: 30),
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: chamando ? T.redDark : fundo,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                    mesa.principalDoGrupo
+                        ? mesa.tituloDoGrupoCurto
+                        : mesa.titulo,
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                    style: TextStyle(
+                        fontSize: mesa.quantasNoGrupo >= 3
+                            ? 11.5
+                            : (mesa.principalDoGrupo ? 13 : 15),
+                        fontWeight: FontWeight.w800,
+                        color: chamando ? Colors.white : cor,
+                        letterSpacing: -.3)),
+              ),
+              const Spacer(),
+              // com 3 mesas ou mais o número do grupo já ocupa a linha:
+              // o contador de pessoas sai para não espremer tudo
+              if (mesa.pessoas > 0 && mesa.quantasNoGrupo < 3)
+                Row(
+                  children: [
+                    Icon(Ico.pessoas, size: 12, color: T.inkSoft),
+                    const SizedBox(width: 3),
+                    Text('${mesa.pessoas}',
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: T.inkSoft)),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // quem está na mesa; se ninguém identificou, o tempo aberta.
+          // Com a mesa CHAMANDO o tempo sai: parecia o tempo da chamada.
+          if (_legenda.isNotEmpty && !chamando)
+            Text(_legenda,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: T.inkMedio)),
+          const Spacer(),
+          if (chamando)
+            Text('CHAMANDO',
+                style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .6,
+                    color: T.redDark))
+          else if (mesa.secundariaDoGrupo)
             Row(
               children: [
-                // o quadradinho colorido agora carrega o número da mesa
-                Container(
-                  constraints: const BoxConstraints(minWidth: 30),
-                  height: 30,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: fundo,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                      mesa.principalDoGrupo
-                          ? mesa.tituloDoGrupoCurto
-                          : mesa.titulo,
+                Icon(Ico.juntar, size: 10, color: cor),
+                const SizedBox(width: 3),
+                Expanded(
+                  child: Text('JUNTA',
                       maxLines: 1,
-                      overflow: TextOverflow.clip,
                       style: TextStyle(
-                          fontSize: mesa.quantasNoGrupo >= 3
-                              ? 11.5
-                              : (mesa.principalDoGrupo ? 13 : 15),
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w800,
-                          color: cor,
-                          letterSpacing: -.3)),
+                          letterSpacing: .5,
+                          color: cor)),
                 ),
-                const Spacer(),
-                // com 3 mesas ou mais o número do grupo já ocupa a linha:
-                // o contador de pessoas sai para não espremer tudo
-                if (mesa.pessoas > 0 && mesa.quantasNoGrupo < 3)
-                  Row(
-                    children: [
-                      Icon(Ico.pessoas, size: 12, color: T.inkSoft),
-                      const SizedBox(width: 3),
-                      Text('${mesa.pessoas}',
-                          style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                              color: T.inkSoft)),
-                    ],
-                  ),
               ],
+            )
+          else if (rotulo.isNotEmpty)
+            Text(rotulo,
+                style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .5,
+                    color: cor)),
+          if (mesa.falta > 0 && !chamando)
+            Text(reais(mesa.falta),
+                style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: T.ink)),
+        ],
+      ),
+    );
+
+    // brilho pulsando + sininho no canto enquanto chama
+    if (chamando) {
+      cartao = _Pulso(
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            cartao,
+            Positioned(
+              top: -6,
+              right: -4,
+              child: Container(
+                width: 22,
+                height: 22,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: T.redDark,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: T.card, width: 2),
+                ),
+                child: const Icon(Ico.sino,
+                    size: 11, color: Colors.white),
+              ),
             ),
-            const SizedBox(height: 8),
-            // quem está na mesa; se ninguém identificou, o tempo aberta
-            if (_legenda.isNotEmpty)
-              Text(_legenda,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: T.inkMedio)),
-            const Spacer(),
-            if (mesa.secundariaDoGrupo)
-              Row(
-                children: [
-                  Icon(Ico.juntar, size: 10, color: cor),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text('JUNTA',
-                        maxLines: 1,
-                        style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .5,
-                            color: cor)),
-                  ),
-                ],
-              )
-            else if (rotulo.isNotEmpty)
-              Text(rotulo,
-                  style: TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: .5,
-                      color: cor)),
-            if (mesa.falta > 0)
-              Text(reais(mesa.falta),
-                  style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: T.ink)),
           ],
         ),
-      ),
+      );
+    }
+
+    return AfundaAoTocar(onTap: onTap, escala: .96, child: cartao);
+  }
+}
+
+/* ---------- brilho que pulsa em volta da mesa chamando ---------- */
+class _Pulso extends StatefulWidget {
+  final Widget child;
+  const _Pulso({required this.child});
+
+  @override
+  State<_Pulso> createState() => _PulsoState();
+}
+
+class _PulsoState extends State<_Pulso>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, filho) {
+        final t = _c.value;
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: T.redDark.withOpacity((1 - t) * .40),
+                spreadRadius: t * 8,
+                blurRadius: 2,
+              ),
+            ],
+          ),
+          child: filho,
+        );
+      },
+      child: widget.child,
     );
   }
 }
@@ -735,13 +862,17 @@ class _CardMesa extends StatelessWidget {
 class _LinhaMesa extends StatelessWidget {
   final Mesa mesa;
   final VoidCallback onTap;
-  const _LinhaMesa({required this.mesa, required this.onTap});
+
+  /// o cliente tocou em "Chamar garçom" nesta mesa
+  final bool chamando;
+  const _LinhaMesa(
+      {required this.mesa, required this.onTap, this.chamando = false});
 
   @override
   Widget build(BuildContext context) {
-    late final Color cor;
-    late final Color fundo;
-    late final String rotulo;
+    late Color cor;
+    late Color fundo;
+    late String rotulo;
 
     if (mesa.pedindoConta) {
       cor = T.amarelo;
@@ -761,11 +892,20 @@ class _LinhaMesa extends StatelessWidget {
       rotulo = mesa.semConsumo ? 'ABERTA' : 'LIVRE';
     }
 
+    // mesa chamando o garçom: vermelho por cima de qualquer situação
+    if (chamando) {
+      cor = T.redDark;
+      fundo = T.redSuave;
+      rotulo = 'CHAMANDO';
+    }
+
     final detalhe = <String>[
       if (mesa.secundariaDoGrupo) 'junta com outra mesa',
       if (mesa.identificacao.isNotEmpty) mesa.identificacao,
       if (mesa.pessoas > 0) '${mesa.pessoas} pessoas',
-      if (!mesa.pareceLivre && mesa.tempoAberta.isNotEmpty) mesa.tempoAberta,
+      // com a mesa CHAMANDO o tempo sai: parecia o tempo da chamada
+      if (!mesa.pareceLivre && mesa.tempoAberta.isNotEmpty && !chamando)
+        mesa.tempoAberta,
     ].join(' · ');
 
     return AfundaAoTocar(
@@ -774,10 +914,13 @@ class _LinhaMesa extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: T.card,
+          color: chamando ? T.redSuave : T.card,
           borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: mesa.pareceLivre ? T.borda : cor, width: 1.4),
+          border: Border.all(
+              color: chamando
+                  ? T.redDark
+                  : (mesa.pareceLivre ? T.borda : cor),
+              width: 1.4),
           boxShadow: sombraCard(),
         ),
         child: Row(
@@ -826,7 +969,9 @@ class _LinhaMesa extends StatelessWidget {
                 ],
               ),
             ),
-            if (mesa.falta > 0)
+            if (chamando)
+              Icon(Ico.sino, size: 18, color: T.redDark)
+            else if (mesa.falta > 0)
               Text(reais(mesa.falta),
                   style: TextStyle(
                       fontSize: 14,

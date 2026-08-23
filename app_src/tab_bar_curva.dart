@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'tema.dart';
 import 'icones.dart';
+import 'estado.dart';
 
 /* ================================================================== *
  *  TAB BAR CURVA — barra branca flutuante com entalhe e bolha
@@ -13,10 +14,14 @@ class ItemAba {
 
 const kAbas = [
   ItemAba('Mesas', Ico.mesas),
+  ItemAba('Alertas', Ico.sino),
   ItemAba('Ganhos', Ico.ganhos),
   ItemAba('Ajustes', Ico.ajustes),
   ItemAba('Perfil', Ico.perfil),
 ];
+
+/// a aba que ganha a bolinha de contagem das chamadas
+const kAbaAlertas = 1;
 
 class TabBarCurva extends StatefulWidget {
   final int indice;
@@ -93,7 +98,11 @@ class _TabBarCurvaState extends State<TabBarCurva>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               if (!ativo) ...[
-                                Icon(kAbas[i].icone, size: 23, color: T.tabOff),
+                                _comBadge(
+                                  i,
+                                  Icon(kAbas[i].icone,
+                                      size: 23, color: T.tabOff),
+                                ),
                                 const SizedBox(height: 4),
                               ] else
                                 const SizedBox(height: 22),
@@ -138,8 +147,11 @@ class _TabBarCurvaState extends State<TabBarCurva>
                             ),
                           ],
                         ),
-                        child: Icon(kAbas[widget.indice].icone,
-                            size: 25, color: Colors.white),
+                        child: _comBadge(
+                          widget.indice,
+                          Icon(kAbas[widget.indice].icone,
+                              size: 25, color: Colors.white),
+                        ),
                       ),
                     ),
                   ),
@@ -147,6 +159,43 @@ class _TabBarCurvaState extends State<TabBarCurva>
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  /// bolinha amarela com a contagem de chamadas, só na aba Alertas
+  Widget _comBadge(int i, Widget icone) {
+    if (i != kAbaAlertas) return icone;
+    return ValueListenableBuilder<List<Map<String, dynamic>>>(
+      valueListenable: chamadasAtivas,
+      builder: (_, lista, __) {
+        if (lista.isEmpty) return icone;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            icone,
+            Positioned(
+              top: -5,
+              right: -8,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 16),
+                height: 16,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCD34D),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: T.card, width: 1.6),
+                ),
+                child: Text('${lista.length}',
+                    style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF7A5A00))),
+              ),
+            ),
+          ],
         );
       },
     );

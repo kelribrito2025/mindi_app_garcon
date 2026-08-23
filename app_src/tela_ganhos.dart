@@ -57,7 +57,7 @@ class _TelaGanhosState extends State<TelaGanhos> {
   }
 
   void _aoTrocarAba() {
-    if (abaSelecionada.value == 1 && mounted) _buscar();
+    if (abaSelecionada.value == 2 && mounted) _buscar();
   }
 
   /* ---------------- período escolhido ---------------- */

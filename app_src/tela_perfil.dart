@@ -44,7 +44,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
   }
 
   void _aoTrocarAba() {
-    if (abaSelecionada.value == 3 && mounted) _carregar();
+    if (abaSelecionada.value == 4 && mounted) _carregar();
   }
 
   /// busca os dados do garçom na API
