@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:restart_app/restart_app.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,7 +22,7 @@ import 'icones.dart';
 
 /// Versão que aparece no Perfil. Precisa bater com a linha `version:`
 /// do pubspec.yaml — o Shorebird só aplica correção feita para ela.
-const String kVersaoDoApp = '1.0.0+7';
+const String kVersaoDoApp = '1.0.0+8';
 
 /// vira true quando existe correção baixada esperando o próximo arranque
 final atualizacaoPronta = ValueNotifier<bool>(false);
@@ -142,7 +143,7 @@ class AvisoDeAtualizacao extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
                               height: 1.2)),
-                      Text('Feche e abra o app para aplicar',
+                      Text('Toque em Reiniciar para aplicar',
                           style: TextStyle(
                               fontSize: 11.5,
                               height: 1.25,
@@ -152,11 +153,21 @@ class AvisoDeAtualizacao extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 AfundaAoTocar(
-                  // encerra o processo DE VERDADE: o SystemNavigator.pop
-                  // só esconde o app e o Android o mantém vivo — ao voltar,
-                  // a correção não entrava. Com exit(0) o próximo toque no
-                  // ícone abre o app do zero, já corrigido.
-                  onTap: () => exit(0),
+                  // reinicia DE VERDADE: agenda a reabertura e mata o
+                  // processo — o app pisca e volta sozinho, já com a
+                  // correção aplicada (a correção só entra em processo
+                  // novo). No Android funciona; se falhar, cai no
+                  // exit(0) e a pessoa abre de novo na mão.
+                  onTap: () async {
+                    try {
+                      await Restart.restartApp(
+                        mode: RestartMode.process,
+                        forceKill: true,
+                      );
+                    } catch (_) {
+                      exit(0);
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 8),
@@ -164,7 +175,7 @@ class AvisoDeAtualizacao extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(11),
                     ),
-                    child: Text('Fechar',
+                    child: Text('Reiniciar',
                         style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
