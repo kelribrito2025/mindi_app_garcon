@@ -354,12 +354,14 @@ class Api {
   }
 
   /// "Estou indo" — avisa a equipe que alguém assumiu
-  static Future<void> assumirChamada(int id) =>
-      _enviar('POST', '$_raiz/calls/$id/acknowledge');
+  static Future<void> assumirChamada(int id) => _enviar(
+      'POST', '$_raiz/calls/$id/acknowledge',
+      chaveUnica: novaChaveUnica());
 
   /// "Atendido" — encerra a chamada (some para todos)
-  static Future<void> concluirChamada(int id) =>
-      _enviar('POST', '$_raiz/calls/$id/resolve');
+  static Future<void> concluirChamada(int id) => _enviar(
+      'POST', '$_raiz/calls/$id/resolve',
+      chaveUnica: novaChaveUnica());
 
   /* ================================================================ *
    *  2. MESAS
