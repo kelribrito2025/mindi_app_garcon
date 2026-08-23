@@ -203,23 +203,29 @@ class _TelaAlertasState extends State<TelaAlertas> {
       padding: const EdgeInsets.symmetric(vertical: 60),
       child: Column(
         children: [
-          Container(
-            width: 74,
-            height: 74,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: T.campo,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Ico.sino, size: 32, color: T.fraco),
+          // o radar pulsando, igual ao "Aguardando pedidos" do
+          // app do entregador
+          const _RadarChamadas(tamanho: 168, nucleo: 68, icone: 30),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 19,
+                height: 19,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2.6, color: T.redDark),
+              ),
+              const SizedBox(width: 10),
+              Text('Aguardando chamadas',
+                  style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      color: T.ink,
+                      letterSpacing: -.3)),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text('Nenhuma chamada',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: T.ink)),
-          const SizedBox(height: 5),
+          const SizedBox(height: 6),
           SizedBox(
             width: 260,
             child: Text(
@@ -227,7 +233,7 @@ class _TelaAlertasState extends State<TelaAlertas> {
               'no cardápio da mesa, o aviso aparece aqui.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                  fontSize: 13, color: T.inkSoft, height: 1.45),
+                  fontSize: 13.5, color: T.inkSoft, height: 1.45),
             ),
           ),
         ],
@@ -349,6 +355,101 @@ class _TelaAlertasState extends State<TelaAlertas> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/* ---------- anéis pulsando (igual ao radar do entregador) ---------- */
+class _RadarChamadas extends StatefulWidget {
+  final double tamanho;
+  final double nucleo;
+  final double icone;
+  const _RadarChamadas({
+    this.tamanho = 190,
+    this.nucleo = 74,
+    this.icone = 34,
+  });
+
+  @override
+  State<_RadarChamadas> createState() => _RadarChamadasState();
+}
+
+class _RadarChamadasState extends State<_RadarChamadas>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Widget _anel(double fase) {
+    final escala = 0.45 + 0.55 * fase;
+    final opacidade =
+        fase < 0.15 ? (fase / 0.15) * 0.55 : 0.55 * (1 - (fase - 0.15) / 0.85);
+    return Opacity(
+      opacity: opacidade.clamp(0.0, 1.0).toDouble(),
+      child: Transform.scale(
+        scale: escala,
+        child: Container(
+          width: widget.tamanho,
+          height: widget.tamanho,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: T.redDark.withOpacity(.06),
+            border:
+                Border.all(color: T.redDark.withOpacity(.35), width: 1.5),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.tamanho,
+      height: widget.tamanho,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value;
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              _anel(t),
+              _anel((t + 1 / 3) % 1),
+              _anel((t + 2 / 3) % 1),
+              Container(
+                width: widget.nucleo,
+                height: widget.nucleo,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEC5B57), Color(0xFFD8434B)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: T.redDark.withOpacity(.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Icon(Ico.sino,
+                    size: widget.icone, color: Colors.white),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
