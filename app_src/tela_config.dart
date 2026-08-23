@@ -153,10 +153,10 @@ class _TelaConfigState extends State<TelaConfig> {
                       ),
                     ),
 
-                    const _Rotulo('IMPRESSORA'),
+                    const _Rotulo('Impressora'),
                     const _CartaoImpressora(),
 
-                    const _Rotulo('PREFERÊNCIAS'),
+                    const _Rotulo('Preferências'),
                     const _CartaoVisualizacao(),
 
                     const SizedBox(height: 16),
@@ -183,14 +183,96 @@ class _Rotulo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, 22, 4, 9),
+        // mesmo estilo dos títulos de seção da aba Perfil
+        padding: const EdgeInsets.fromLTRB(6, 22, 6, 7),
         child: Text(texto,
             style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .8,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
                 color: T.inkSoft)),
       );
+}
+
+/* ---------- uma linha compacta, igual aos itens da aba Perfil ---------- */
+class _LinhaAjuste extends StatelessWidget {
+  final IconData icone;
+  final Color cor, fundo;
+  final String titulo;
+  final String? sub;
+  final VoidCallback? onTap;
+  final bool carregando;
+  const _LinhaAjuste({
+    required this.icone,
+    required this.cor,
+    required this.fundo,
+    required this.titulo,
+    this.sub,
+    this.onTap,
+    this.carregando = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        decoration: BoxDecoration(
+          color: T.card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: sombraCard(),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: fundo,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: carregando
+                  ? SizedBox(
+                      width: 17,
+                      height: 17,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.2, color: cor),
+                    )
+                  : Icon(icone, size: 17, color: cor),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo,
+                      style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -.2,
+                          color: T.ink)),
+                  if (sub != null && sub!.isNotEmpty) ...[
+                    const SizedBox(height: 1),
+                    Text(sub!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: T.inkSoft)),
+                  ],
+                ],
+              ),
+            ),
+            Icon(Ico.avancar, size: 20, color: T.fraco),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /* ================================================================== *
@@ -207,57 +289,17 @@ class _CartaoVisualizacao extends StatelessWidget {
       valueListenable: modoLista,
       builder: (_, lista, __) => ValueListenableBuilder<bool>(
         valueListenable: cincoPorLinha,
-        builder: (_, cinco, __) => AfundaAoTocar(
+        builder: (_, cinco, __) => _LinhaAjuste(
+          icone: lista ? Ico.lista : Ico.mesas,
+          cor: T.azul,
+          fundo: T.azulSuave,
+          titulo: 'Modo de visualização',
+          sub: lista
+              ? 'Lista'
+              : cinco
+                  ? 'Grade · 5 mesas por linha'
+                  : 'Grade · 3 mesas por linha',
           onTap: () => _modalDeVisualizacao(context),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: T.card,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: T.azulSuave,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(lista ? Ico.lista : Ico.mesas,
-                      size: 21, color: T.azul),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Modo de visualização',
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: T.ink,
-                              height: 1.2)),
-                      const SizedBox(height: 2),
-                      Text(
-                          lista
-                              ? 'Lista'
-                              : cinco
-                                  ? 'Grade · 5 mesas por linha'
-                                  : 'Grade · 3 mesas por linha',
-                          style: TextStyle(
-                              fontSize: 12.5,
-                              height: 1.25,
-                              color: T.inkSoft)),
-                    ],
-                  ),
-                ),
-                Icon(Ico.avancar, size: 20, color: T.fraco),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -587,6 +629,155 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
     }
   }
 
+  /// modal com a situação e o botão de imprimir teste
+  Future<void> _abrirModal() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(.55),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, muda) {
+          Future<void> testarAqui() async {
+            // dispara o teste e redesenha o modal já com o spinner
+            final teste = _testar();
+            muda(() {});
+            await teste;
+            if (ctx.mounted) muda(() {});
+          }
+
+          final cor = _semRecurso
+              ? T.inkSoft
+              : _ligada
+                  ? T.green
+                  : T.redDark;
+          final fundo = _semRecurso
+              ? T.campo
+              : _ligada
+                  ? T.greenSuave
+                  : T.redSuave;
+
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+                18, 20, 18, 18 + MediaQuery.of(ctx).padding.bottom),
+            decoration: BoxDecoration(
+              color: T.card,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: T.borda,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: fundo,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child:
+                          Icon(Ico.impressora, size: 23, color: cor),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_titulo(),
+                              style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w800,
+                                  color: T.ink,
+                                  height: 1.15,
+                                  letterSpacing: -.4)),
+                          Text(_detalhe(),
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.25,
+                                  color: T.inkSoft)),
+                        ],
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(ctx).pop(),
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: T.campo,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Ico.fechar,
+                            size: 17, color: T.inkMedio),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_recado.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(_recado,
+                      style: TextStyle(
+                          fontSize: 12.5, color: T.inkMedio)),
+                ],
+                const SizedBox(height: 18),
+                AfundaAoTocar(
+                  onTap: _testando ? () {} : testarAqui,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: T.campo,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: T.borda),
+                    ),
+                    child: _testando
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: T.tabOff),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Ico.impressora,
+                                  size: 16, color: T.inkMedio),
+                              const SizedBox(width: 8),
+                              Text('Imprimir teste',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: T.inkMedio)),
+                            ],
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    // ao fechar, o card resume a situação mais nova
+    if (mounted) setState(() => _recado = '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final cor = _semRecurso
@@ -600,94 +791,16 @@ class _CartaoImpressoraState extends State<_CartaoImpressora> {
             ? T.greenSuave
             : T.redSuave;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: T.card,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: sombraCard(opacidade: .09, blur: 20, y: 6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: fundo,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(Ico.impressora, size: 24, color: cor),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_titulo(),
-                        style: TextStyle(
-                            fontSize: 15.5,
-                            fontWeight: FontWeight.w800,
-                            color: T.ink,
-                            height: 1.2)),
-                    const SizedBox(height: 2),
-                    Text(_detalhe(),
-                        style: TextStyle(
-                            fontSize: 12.5, height: 1.3, color: T.inkSoft)),
-                  ],
-                ),
-              ),
-              if (_carregando)
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: T.tabOff),
-                ),
-            ],
-          ),
-          if (_recado.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(_recado,
-                style: TextStyle(fontSize: 12.5, color: T.inkMedio)),
-          ],
-          const SizedBox(height: 14),
-          AfundaAoTocar(
-            onTap: _testando ? () {} : _testar,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: T.campo,
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: T.borda),
-              ),
-              child: _testando
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: T.tabOff),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Ico.impressora, size: 16, color: T.inkMedio),
-                        const SizedBox(width: 8),
-                        Text('Imprimir teste',
-                            style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: T.inkMedio)),
-                      ],
-                    ),
-            ),
-          ),
-        ],
-      ),
+    // linha compacta, igual aos itens da aba Perfil;
+    // o teste de impressão fica no modal
+    return _LinhaAjuste(
+      icone: Ico.impressora,
+      cor: cor,
+      fundo: fundo,
+      titulo: _titulo(),
+      sub: _detalhe(),
+      carregando: _carregando,
+      onTap: _abrirModal,
     );
   }
 
