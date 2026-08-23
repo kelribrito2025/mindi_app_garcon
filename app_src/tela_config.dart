@@ -183,13 +183,13 @@ class _Rotulo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        // mesmo estilo dos títulos de seção da aba Perfil
+        // mesmo estilo dos títulos de seção do Perfil do app admin
         padding: const EdgeInsets.fromLTRB(6, 22, 6, 7),
         child: Text(texto,
             style: TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1,
+                letterSpacing: .1,
                 color: T.inkSoft)),
       );
 }

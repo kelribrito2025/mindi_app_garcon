@@ -215,7 +215,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
                     ),
 
                     // ---------- CONTA ----------
-                    const _Titulo('CONTA'),
+                    const _Titulo('Conta'),
                     _Grupo(itens: [
                       _Item(
                         icone: Ico.perfil,
@@ -243,7 +243,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
                     ]),
 
                     // ---------- APARÊNCIA ----------
-                    const _Titulo('APARÊNCIA'),
+                    const _Titulo('Aparência'),
                     _Grupo(itens: [
                       _Item(
                         icone: modoEscuro.value ? Ico.lua : Ico.sol,
@@ -260,7 +260,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
                     ]),
 
                     // ---------- SUPORTE ----------
-                    const _Titulo('SUPORTE'),
+                    const _Titulo('Suporte'),
                     _Grupo(itens: [
                       _Item(
                         icone: Ico.ajuda,
@@ -314,9 +314,9 @@ class _Titulo extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(6, 16, 6, 7),
         child: Text(texto,
             style: TextStyle(
-                fontSize: 11,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 1,
+                letterSpacing: .1,
                 color: T.inkSoft)),
       );
 }
