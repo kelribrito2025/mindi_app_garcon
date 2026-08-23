@@ -250,83 +250,70 @@ class TelaInterna extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final conteudo = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            GestureDetector(
-              onTap: () => Navigator.of(context).maybePop(),
-              child: Container(
-                width: 42,
-                height: 42,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: T.campo,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: T.borda),
-                ),
-                child: Icon(Ico.voltar,
-                    size: 26, color: T.ink),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(titulo,
-                  style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: T.ink,
-                      letterSpacing: -.4)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        child,
-      ],
-    );
-
-    // Com o teclado aberto sobra pouca tela. Nessa hora o header vermelho
-    // sai de cena para o formulário caber inteiro.
-    final tecladoAberto = MediaQuery.of(context).viewInsets.bottom > 0;
-
+    // O TÍTULO fica no header vermelho, com o botão redondo de voltar
+    // ao lado esquerdo — o mesmo visual das telas internas do app
+    // admin (ex.: a tela do produto no cardápio).
     return Scaffold(
       backgroundColor: T.bg,
-      // o Scaffold já encolhe o corpo na altura do teclado,
-      // por isso NÃO somamos viewInsets no padding (senão conta duas vezes)
       resizeToAvoidBottomInset: true,
       body: Column(
         children: [
-          if (tecladoAberto)
-            SizedBox(height: MediaQuery.of(context).padding.top)
-          else
-            const HeaderVermelho(
-              child: BarraBoasVindas(clicavel: false),
+          HeaderVermelho(
+            child: Row(
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).maybePop(),
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withOpacity(.14),
+                    ),
+                    child: const Icon(Ico.voltar,
+                        size: 22, color: Colors.white),
+                  ),
+                ),
+                Expanded(
+                  child: Text(titulo,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -.3)),
+                ),
+                // espaço do tamanho do botão, para o título ficar
+                // exatamente no centro
+                const SizedBox(width: 40),
+              ],
             ),
+          ),
           Expanded(
             child: Transform.translate(
-              offset: Offset(0, tecladoAberto ? 0 : -44),
+              offset: const Offset(0, -44),
               child: Container(
                 decoration: BoxDecoration(
                   color: T.bg,
-                  borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(tecladoAberto ? 0 : 28)),
+                  borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28)),
                 ),
                 // viewPadding (e não padding) porque o Scaffold já
                 // "consome" o padding — e aí a barra do Android acabava
                 // ficando por cima do botão de salvar.
-                padding: EdgeInsets.fromLTRB(
-                    kSide,
-                    tecladoAberto ? 10 : 22,
-                    kSide,
+                padding: EdgeInsets.fromLTRB(kSide, 22, kSide,
                     26 + MediaQuery.viewPaddingOf(context).bottom),
                 child: rolavel
                     ? SingleChildScrollView(
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
-                        child: conteudo,
+                        child: child,
                       )
-                    : conteudo,
+                    : child,
               ),
             ),
           ),
