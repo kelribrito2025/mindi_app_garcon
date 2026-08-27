@@ -22,7 +22,7 @@ import 'icones.dart';
 
 /// Versão que aparece no Perfil. Precisa bater com a linha `version:`
 /// do pubspec.yaml — o Shorebird só aplica correção feita para ela.
-const String kVersaoDoApp = '1.0.0+8';
+const String kVersaoDoApp = '1.0.0+9';
 
 /// vira true quando existe correção baixada esperando o próximo arranque
 final atualizacaoPronta = ValueNotifier<bool>(false);
