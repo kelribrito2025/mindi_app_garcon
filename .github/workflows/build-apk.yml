@@ -54,6 +54,24 @@ jobs:
       - name: Criar a estrutura Android
         run: flutter create . --org com.mindi --project-name garcom --platforms=android
 
+      - name: Aplicar o icone do app (se existir icone_app.png)
+        run: |
+          if [ ! -f icone_app.png ]; then
+            echo "Sem icone_app.png no repositorio - seguindo com o icone padrao."
+            exit 0
+          fi
+          pip install pillow --quiet
+          python3 - <<'EOF'
+          from PIL import Image
+          src = Image.open('icone_app.png').convert('RGB')
+          tamanhos = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96,
+                      'xxhdpi': 144, 'xxxhdpi': 192}
+          for pasta, t in tamanhos.items():
+              destino = f'android/app/src/main/res/mipmap-{pasta}/ic_launcher.png'
+              src.resize((t, t), Image.LANCZOS).save(destino, 'PNG')
+              print('icone aplicado:', destino)
+          EOF
+
       - name: Liberar internet e notificacao no Android
         run: |
           python3 - <<'EOF'
@@ -353,6 +371,35 @@ jobs:
           grep -q "flutter_local_notifications" pubspec.yaml || flutter pub add flutter_local_notifications
           grep -q "shorebird_code_push" pubspec.yaml || flutter pub add shorebird_code_push
           cat pubspec.yaml
+
+      - name: Garantir as imagens (assets) no pubspec
+        run: |
+          python3 - <<'EOF'
+          import os
+          p = open('pubspec.yaml', encoding='utf-8').read()
+          arquivos = sorted(os.listdir('assets')) if os.path.isdir('assets') else []
+          faltando = [f'assets/{a}' for a in arquivos
+                      if not a.startswith('.') and f'assets/{a}' not in p]
+          if not arquivos:
+              print('sem pasta assets - nada a fazer')
+          elif not faltando:
+              print('todas as imagens ja estavam declaradas')
+          elif '  assets:' in p:
+              i = p.index('  assets:')
+              j = p.index('\n', i) + 1
+              p = p[:j] + ''.join(f'    - {c}\n' for c in faltando) + p[j:]
+              open('pubspec.yaml', 'w', encoding='utf-8').write(p)
+              print('adicionadas ao pubspec:', faltando)
+          else:
+              i = p.index('flutter:')
+              j = p.index('\n', i) + 1
+              bloco = '  assets:\n' + ''.join(f'    - {c}\n' for c in faltando)
+              p = p[:j] + bloco + p[j:]
+              open('pubspec.yaml', 'w', encoding='utf-8').write(p)
+              print('lista de assets criada com:', faltando)
+          EOF
+          echo '--- como ficou o final do pubspec ---'
+          sed -n '/^flutter:/,$p' pubspec.yaml
 
       - name: Conferir o arquivo do Shorebird
         run: |
